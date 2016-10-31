@@ -6,7 +6,7 @@ import MySQLdb
 
 
 class DBHelper:
-	DBC = MySQLdb.connect(host="localhost",user="root",passwd="mysqllawinse",db="api06_test",charset='utf8');
+	DBC = MySQLdb.connect(host="localhost",user="osm",passwd="osm",db="api06_test",charset='utf8');
 	LOGGER = [];
 	def __init__(self):
 		self.cursor = DBHelper.DBC.cursor();
