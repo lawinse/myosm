@@ -14,7 +14,7 @@ class DBHelper:
 		self.execute(sql);
 		data = self.cursor.fetchall();
 		return data;
-	def fetchNext(num=1):
+	def fetchNext(self,num=1):
 		if num==1:
 			data = self.cursor.fetchone();
 		else:

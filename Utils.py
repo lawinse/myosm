@@ -46,7 +46,7 @@ class DistanceUtils:
 		all_nodes = dbh.executeAndFetchAll("select id,latitude,longitude from current_nodes where visible = 1")
 		# build idx->node_id map
 		idx_map = {};
-		for i in range(len(all_nodes)):
+		for i in xrange(len(all_nodes)):
 			idx_map[i] = all_nodes[i][0];
 		# build kdtree
 		x = [item[1] for item in all_nodes];

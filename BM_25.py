@@ -3,10 +3,8 @@ import gensim
 from gensim import corpora
 import math
 import jieba
-jieba.initialize()
 from DBHelper import *
 from sklearn.externals import joblib
-from Utils import NodeNameUtils, WayNameUtils
 import os
 
 
@@ -22,6 +20,7 @@ class BM_25:
 		if typ == 'Node' and BM_25.BM_MDL_ND != None: return
 		if typ == 'Way' and BM_25.BM_MDL_WAY != None: return 
 		if not os.path.exists("./data/BM_25_"+typ+".mdl"):
+			from Utils import NodeNameUtils, WayNameUtils
 			print ">>>>> Building BM_25 Model ..."
 			dbh = DBHelper();
 			raw = dbh.executeAndFetchAll("select distinct v from current_"+typ.lower()+"_tags where k='name'");
