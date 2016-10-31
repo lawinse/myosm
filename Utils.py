@@ -256,7 +256,7 @@ class OtherUtils:
 		if OtherUtils.Nid_Coord == None:
 			ret = {}
 			if os.path.exists("./data/Nid_Coord.dat"):
-				print ">>>> Loading Nid_Coord ..."
+				print ">>>>> Loading Nid_Coord ..."
 				ret = joblib.load("./data/Nid_Coord.dat");
 			else:
 				dbh = DBHelper();
@@ -304,19 +304,19 @@ def test_node2Line():
 if __name__ == '__main__':
 	# print OtherUtils.StdlizePOIType("高校".decode('utf8'))
 	# DistanceUtils.Build()
-	# frompoint = [40.0351,116.40863583333334]
-	# topoint = [40.0352,116.4086358333333]
-	# print DistanceUtils.spherical_distance(frompoint,topoint)
-	nu = NodeNameUtils();
-	print NodeNameUtils.Name2id["中国浦发".decode("utf8")]
-	retli = nu.getMostSim("中国民生银行".decode('utf8'))
-	for ret in retli:
-		print ret[0],ret[1],ret[2]
-	while(True):
-		target = raw_input();
-		retli = nu.getMostSim(target.decode('utf8'))
-		for ret in retli:
-			print ret[0],ret[1],ret[2]
+	frompoint = [31.1977664,121.4147976]
+	topoint = [31.2086403, 121.6091085]
+	print DistanceUtils.spherical_distance(frompoint,topoint)
+	# nu = NodeNameUtils();
+	# print NodeNameUtils.Name2id["中国浦发".decode("utf8")]
+	# retli = nu.getMostSim("中国民生银行".decode('utf8'))
+	# for ret in retli:
+	# 	print ret[0],ret[1],ret[2]
+	# while(True):
+	# 	target = raw_input();
+	# 	retli = nu.getMostSim(target.decode('utf8'))
+	# 	for ret in retli:
+	# 		print ret[0],ret[1],ret[2]
 	# WayNameUtils.Build();
 	# wnu = WayNameUtils();
 	# retli = wnu.findSim("杨高中路".decode('utf8'))
