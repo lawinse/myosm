@@ -3,6 +3,7 @@ from Utils import coord_scale_default as csd;
 from Utils import OtherUtils;
 import datetime
 from DBHelper import *
+import gc
 
 def bracketen(a):
 	try:
@@ -262,6 +263,8 @@ class OsmGenerator:
 		for pointID in self.Points.keys():
 			self.f.write(batchIndent(self.Points[pointID].translate()));
 			self.f.write("\n");
+		self.Points = {};
+		gc.collect();
 
 
 		print ">>>>> create_new_ways ..."
@@ -269,6 +272,8 @@ class OsmGenerator:
 		for wID in self.Ways.keys():
 			self.f.write(batchIndent(self.Ways[wID].translate()));
 			self.f.write("\n");
+		self.Ways = {};
+		gc.collect();
 
 
 		print ">>>>> create_new_relations ..."
@@ -276,6 +281,8 @@ class OsmGenerator:
 		for rID in self.Relations.keys():
 			self.f.write(batchIndent(self.Relations[rID].translate()));
 			self.f.write("\n");
+		self.Relations = {};
+		gc.collect();
 
 		self.f.write(OsmGenerator.Default_tailer);
 

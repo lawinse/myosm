@@ -8,6 +8,7 @@ from BKTree_EditDistance import BKTree
 import sys
 import math
 import re
+from BM_25 import *;
 sys.setrecursionlimit(10000)
 eps = 1e-7
 coord_scale_default = 1e7
@@ -163,11 +164,15 @@ class NodeNameUtils:  # align to utf8
 				if len(data) > 0:
 					return [(data[i][1],data[i][0],NodeNameUtils.Name2id[data[i][1]]) for i in range(min(5,len(data)))]
 		return None
-	def getMostSim(self,s1):
-		# TODO
+	def getMostSim(self,s1,num=1):
 		ret = self.findSim(s1);
 		if ret == None: return None;
-		return ret;
+		nodeBm = BM_25(typ='Node');
+		scores = nodeBm.score(s1,[item[0] for item in ret]);
+		ret = [ (ret[i][0], scores[i], ret[i][1], ret[i][2])for i in range(len(scores))]
+		def cmp(x,y):
+			return x[2]-y[2] if y[1] == x[1] else (-1 if y[1]<x[1] else 1);
+		return sorted(ret,cmp)[:num];
 
 class WayNameUtils:  # align to utf8
 	Name2id_way = {};
@@ -225,16 +230,21 @@ class WayNameUtils:  # align to utf8
 					return [(data[i][1],data[i][0],WayNameUtils.Name2id_way[data[i][1]]) for i in range(min(5,len(data)))]
 		return None
 	def getMostSim(self,s1,num=1):
-		# TODO
 		ret = self.findSim(s1);
 		if ret == None: return None;
-		return ret[:num];
+		wBm = BM_25(typ='Way');
+		scores = wBm.score(s1,[item[0] for item in ret]);
+		ret = [ (ret[i][0], scores[i], ret[i][1], ret[i][2])for i in range(len(scores))]
+		def cmp(x,y):
+			return x[2]-y[2] if y[1] == x[1] else (-1 if y[1]<x[1] else 1);
+		return sorted(ret,cmp)[:num];
 
 
 
 class OtherUtils:
 	Nid_Coord = None
 	Relation_Father = None
+	Poi_Mapping = None
 	@staticmethod
 	def Build():
 		print ">>>>> Initalize OtherUtils ..."
@@ -259,8 +269,15 @@ class OtherUtils:
 		return OtherUtils.Nid_Coord;
 	@staticmethod
 	def StdlizePOIType(poitype):
-		# TODO
-		return poitype;
+		if OtherUtils.Poi_Mapping == None:
+			OtherUtils.Poi_Mapping = {}
+			with open('./poitype.map','r+') as f1:
+				for lines in f1.readlines():
+					li = lines.decode('utf8').split();
+					for item in li: OtherUtils.Poi_Mapping[item] = li[0]
+		if OtherUtils.Poi_Mapping.has_key(poitype):
+			return OtherUtils.Poi_Mapping[poitype];
+		return None
 	@staticmethod
 	def GetRelationFather():
 		if OtherUtils.Relation_Father == None:
@@ -285,21 +302,21 @@ def test_node2Line():
 
 
 if __name__ == '__main__':
-	print OtherUtils.GetRelationFather()
+	# print OtherUtils.StdlizePOIType("高校".decode('utf8'))
 	# DistanceUtils.Build()
 	# frompoint = [40.0351,116.40863583333334]
 	# topoint = [40.0352,116.4086358333333]
 	# print DistanceUtils.spherical_distance(frompoint,topoint)
-	# nu = NodeNameUtils();
-	# print NodeNameUtils.Name2id["中国浦发".decode("utf8")]
-	# retli = nu.findSim("中国民生银行".decode('utf8'))
-	# for ret in retli:
-	# 	print ret[0],ret[1],ret[2]
-	# while(True):
-	# 	target = raw_input();
-	# 	retli = nu.findSim(target.decode('utf8'))
-	# 	for ret in retli:
-	# 		print ret[0],ret[1],ret[2]
+	nu = NodeNameUtils();
+	print NodeNameUtils.Name2id["中国浦发".decode("utf8")]
+	retli = nu.getMostSim("中国民生银行".decode('utf8'))
+	for ret in retli:
+		print ret[0],ret[1],ret[2]
+	while(True):
+		target = raw_input();
+		retli = nu.getMostSim(target.decode('utf8'))
+		for ret in retli:
+			print ret[0],ret[1],ret[2]
 	# WayNameUtils.Build();
 	# wnu = WayNameUtils();
 	# retli = wnu.findSim("杨高中路".decode('utf8'))
@@ -310,7 +327,7 @@ if __name__ == '__main__':
 	# 	retli = wnu.findSim(target.decode('utf8'))
 	# 	for ret in retli:
 	# 		print ret[0],ret[1],ret[2]
-	ds = DistanceUtils();
-	print ds.queryNN(pointlist = np.array([[312268644,1215310826]]), k_nn=8);
+	# ds = DistanceUtils();
+	# print ds.queryNN(pointlist = np.array([[312268644,1215310826]]), k_nn=8);
 	# ds2 = DistanceUtils();
 	# print ds2.queryNN(pointlist = np.array([[312268644,1215310826],[0,1]]), k_nn=3);
