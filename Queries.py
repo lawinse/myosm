@@ -8,22 +8,25 @@ class Queries:
 		NodeNameUtils.Build();
 		WayNameUtils.Build();
 		OtherUtils.Build();
-	def query1(self, node_id=None,coord=None):  # type(coord)=list 
+	def query1(self, node_id=None,coord=None,node_name=None):  # type(coord)=list 
 		tid = -1;
-		if node_id==None and coord==None:
+		if node_id==None and coord==None and node_name == None:
 			return None;
-		if node_id==None:  #by coord
+		if coord != None:  #by coord
 			du = DistanceUtils();
 			coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
 			raw = du.queryNN(pointlist = np.array([coord_int]), k_nn=1);
 			tid = raw[0][0][0];
+		elif node_name != None:
+			nu = NodeNameUtils();
+			tid = nu.getMostSim(node_name)[0][3];
 		else:
 			tid = node_id;
 		dbh = DBHelper();
 		result = dbh.executeAndFetchAll("select distinct id from current_way_nodes where node_id="+str(tid));
 		isIntersection = len(result) > 1;
 		way_list = [tp[0] for tp in result];
-		return (way_list, isIntersection)
+		return (tid, way_list, isIntersection)
 
 	def query2(self,way_id=None):       # assume given by way_id
 		if way_id == None:
@@ -113,14 +116,43 @@ class Queries:
 		gen = OsmGenerator(filename,minLat, maxLat, minLon, maxLon);
 		gen.process();
 		gen.commit();
+		return filename
+
+	def query_routing(self,routeType,start_coord,end_coord):
+		from Routing import Routing
+		ro = Routing(routeType);
+		return ro.findRoute(start_coord,end_coord)
+
+	def query_pair_poitype(self,coord,poi1,poi2,order_sensitive=False,num=5):
+		du = DistanceUtils();
+		coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
+		Nid2Coord = OtherUtils.GetNid2Coord();
+		poi1 = OtherUtils.StdlizePOIType(poi1);
+		poi2 = OtherUtils.StdlizePOIType(poi2);
+		dbh = DBHelper();
+		print ">>>>> Searching and Ordering ..."
+		raw = dbh.executeAndFetchAll(\
+			"select * from "
+			"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi1+"') as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
+			"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi2+"') as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
+			"order by sqrt(pow(v1.latitude/1e7-v2.latitude/1e7,2)+pow(v1.longitude/1e7-v2.longitude/1e7,2)) + sqrt(least(pow(v1.latitude/1e7-"+str(coord[0])+",2)+pow(v1.longitude/1e7-"+str(coord[1])+",2), pow(v2.latitude/1e7-"+str(coord[0])+",2)+pow(v2.longitude/1e7-"+str(coord[1])+",2))) "+\
+			"limit 0,"+str(num) if order_sensitive == False else \
+			"select * from "
+			"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi1+"') as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
+			"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi2+"') as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
+			"order by sqrt(pow(v1.latitude/1e7-v2.latitude/1e7,2)+pow(v1.longitude/1e7-v2.longitude/1e7,2)) + sqrt(pow(v1.latitude/1e7-"+str(coord[0])+",2)+pow(v1.longitude/1e7-"+str(coord[1])+",2)) "+\
+			"limit 0,"+str(num)) 
+		data = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]))for tp in raw]
+		return data
 
 
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	while 1:
-		a = raw_input();
-		print myQuery.query5(coord=eval(a))
+	print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=True)
+	# while 1:
+	# 	a = raw_input();
+	# 	print myQuery.query5(coord=eval(a))
 	# while 1:
 	# 	id = input();
 	# 	print myQuery.query1(node_id=id);

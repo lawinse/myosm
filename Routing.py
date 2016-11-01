@@ -9,7 +9,8 @@ from Utils import OtherUtils;
 import numpy as np
 
 
-Weightings = { \
+def getWeight(transport, wayType):
+	Weightings = { \
 	'motorway': {'car':10},
 	'trunk':    {'car':10, 'bike':0.05},
 	'primary':  {'bike': 0.3, 'car':2, 'walk':1},
@@ -25,8 +26,6 @@ Weightings = { \
 	'walkway': {'bike': 0.2, 'walk':1},
 	'steps': {'walk':1, 'bike':0.3},
 	}
-
-def getWeight(transport, wayType):
 	try:
 		return(Weightings[wayType][transport])
 	except KeyError:

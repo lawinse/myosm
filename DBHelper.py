@@ -51,7 +51,18 @@ class DBHelper:
 
 if __name__ == '__main__':
 	dbh = DBHelper();
-	print dbh.executeAndFetchAll("select * from current_relation_members limit 0,10");
+	# print dbh.executeAndFetchAll("select * from current_relation_members limit 0,10");
+	poi1 = '酒店'.decode('utf8')
+	poi2 = '加油加气站'.decode('utf8')
+	num=5
+	coord = [31.1977664,121.4147976]
+	raw = dbh.executeAndFetchAll(\
+	"select * from "
+	"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi1+"') as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
+	"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi2+"') as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
+	"order by sqrt(pow(v1.latitude/1e7-v2.latitude/1e7,2)+pow(v1.longitude/1e7-v2.longitude/1e7,2)) + sqrt(least(pow(v1.latitude/1e7-"+str(coord[0])+",2)+pow(v1.longitude/1e7-"+str(coord[1])+",2), pow(v2.latitude/1e7-"+str(coord[0])+",2)+pow(v2.longitude/1e7-"+str(coord[1])+",2))) "+\
+	"limit 0,"+str(num))
+	print raw
 	# print dbh.executeAndFetchAll("select id from current_way_nodes where node_id=28111345");
 	# a = "金融".decode('utf8');
 	# print [a]
