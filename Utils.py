@@ -132,7 +132,7 @@ class NodeNameUtils:  # align to utf8
 		else:
 			print ">>>>> Generating ..."
 			dbh = DBHelper();
-			data = dbh.executeAndFetchAll("select node_id,v from current_node_tags where k='name'");
+			data = dbh.executeAndFetchAll("select node_id,v from current_node_tags where k='name' or k='name:zh'");
 			for pair in data:
 				cname = NodeNameUtils.cleanName(pair[1]);
 				if NodeNameUtils.Name2id.has_key(cname):
@@ -197,7 +197,7 @@ class WayNameUtils:  # align to utf8
 		else:
 			print ">>>>> Generating ..."
 			dbh = DBHelper();
-			data = dbh.executeAndFetchAll("select way_id,v from current_way_tags where k='name'");
+			data = dbh.executeAndFetchAll("select way_id,v from current_way_tags where k='name' or k='name:zh'");
 			for pair in data:
 				cname = WayNameUtils.cleanName(pair[1]);
 				if WayNameUtils.Name2id_way.has_key(cname):
@@ -302,6 +302,8 @@ def test_node2Line():
 
 
 if __name__ == '__main__':
+	NodeNameUtils.Build();
+	WayNameUtils.Build();
 	# print OtherUtils.StdlizePOIType("高校".decode('utf8'))
 	# DistanceUtils.Build()
 	frompoint = [31.1977664,121.4147976]
