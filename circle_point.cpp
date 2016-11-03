@@ -12,7 +12,7 @@ struct Point{
     bool operator < (const Point& a)const{
         return angle!=a.angle?angle<a.angle:id>a.id;
     }
-}p[100000];
+};
 
 double lw(double a, double b, double c){
 	a = fmax(a,b);
@@ -46,6 +46,7 @@ double dist(double x1, double y1, double x2, double y2) {
 }
 extern "C"{
 	double* solve(double r, int n, double *px, double *py){
+		Point * p = new Point[2*n+10];
 		double *ret = new double[3];
 		ret[0] = ret[1] = ret[2] = -1;
 		int ans = 1, ans_id = -1;
@@ -75,6 +76,7 @@ extern "C"{
 			ret[1] = ans_x;
 			ret[2] = ans_y;
 		}
+		delete []p;
 		return ret;
 	}
 
