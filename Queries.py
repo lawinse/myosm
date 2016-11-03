@@ -174,14 +174,33 @@ class Queries:
 		count = int(res[0])
 		return ([res[1]*DistanceUtils.coord_scale,res[2]*DistanceUtils.coord_scale],count)
 
-	def query_middle_poi(self,coord1,coord2,poi):
-		pass
+	def query_middle_poi(self,coord1,coord2,poitype,sum_tolerate=0.2,diff_tolerate=0.1,num=2):
+		poitype = OtherUtils.StdlizePOIType(poitype);
+		line_dis_max = DistanceUtils.spherical_distance(coord1,coord2)*(1+sum_tolerate);
+		print line_dis_max
+		dbh = DBHelper();
+		coord1_str = "%f,%f" %(coord1[1],coord1[0])
+		coord2_str = "%f,%f" %(coord2[1],coord2[0])
+		coordmid_str = "%f,%f" %(0.5*(coord2[1]+coord1[1]),0.5*(coord2[0]+coord1[0]))
+
+		print ">>>>> Searching ..."
+		raw = dbh.executeAndFetchAll("select a.id, a.latitude, a.longitude, "+\
+			"st_distance(point(a.longitude/1e7,a.latitude/1e7),point("+coord1_str+"))*111195 as dis1, "+\
+			"st_distance(point(a.longitude/1e7,a.latitude/1e7),point("+coord2_str+"))*111195 as dis2 "+\
+			"from (select id, latitude, longitude from current_nodes where id in "+\
+			"(select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"')) as a "+\
+			"having dis1+dis2<"+str(line_dis_max)+" and abs(dis1-dis2)<least(dis1,dis2)*"+str(diff_tolerate)+\
+			" order by st_distance(point(a.longitude/1e7,a.latitude/1e7),point("+coordmid_str+")) limit 0,"+str(num));
+
+		return [(tp[0],[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
+
 
 
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	print myQuery.query_most_poi_within_radius("加油站".decode('utf8'),5000)
+	# print myQuery.query_most_poi_within_radius("加油站".decode('utf8'),5000)
+	print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"加油站".decode('utf8'))
 	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)
 	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
 	# while 1:
