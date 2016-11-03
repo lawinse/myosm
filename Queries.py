@@ -152,12 +152,37 @@ class Queries:
 			"limit 0,"+str(num)) 
 		data = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]), tp[6])for tp in raw]
 		return data
+	def query_most_poi_within_radius(self, poitype,radius):
+		poitype = OtherUtils.StdlizePOIType(poitype)
+
+		import ctypes
+		if not os.path.exists("./circle_point.so"):
+			os.system("g++ -O2 -fPIC -shared circle_point.cpp -o circle_point.so")
+		dll = ctypes.cdll.LoadLibrary('./circle_point.so')
+		solve = dll.solve
+		solve.restype = ctypes.POINTER(ctypes.c_double)
+		solve.argtypes = [ctypes.c_double,ctypes.c_int,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double)]
+
+		dbh = DBHelper();
+		raw = dbh.executeAndFetchAll("select id, latitude, longitude from current_nodes where id in (select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"')");
+		x = [tp[1]/DistanceUtils.coord_scale for tp in raw];
+		y = [tp[2]/DistanceUtils.coord_scale for tp in raw];
+		num_numbers = len(x)
+		array_type = ctypes.c_double * num_numbers
+		print ">>>>> Searching ..."
+		res = solve(radius,num_numbers,array_type(*x),array_type(*y))
+		count = int(res[0])
+		return ([res[1]*DistanceUtils.coord_scale,res[2]*DistanceUtils.coord_scale],count)
+
+	def query_middle_poi(self,coord1,coord2,poi):
+		pass
 
 
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=True)
+	print myQuery.query_most_poi_within_radius("加油站".decode('utf8'),5000)
+	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)
 	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
 	# while 1:
 	# 	a = raw_input();

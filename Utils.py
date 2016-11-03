@@ -21,8 +21,7 @@ class DistanceUtils:
 	coord_scale = coord_scale_default;
 
 	def __init__(self):
-		if DistanceUtils.kd_tuple == None:
-			DistanceUtils.Build();
+		DistanceUtils.Build();
 
 	def queryNN(self,pointlist, k_nn=1): # query for nearest neighbors
 		# print DistanceUtils.kd_tuple[1].data;
@@ -41,6 +40,7 @@ class DistanceUtils:
 
 	@classmethod
 	def Build(cls):
+		if DistanceUtils.kd_tuple != None: return;
 		print ">>>>> Initalize DistanceUtils ..."
 		dbh = DBHelper();
 		all_nodes = dbh.executeAndFetchAll("select id,latitude,longitude from current_nodes where visible = 1")
@@ -114,8 +114,7 @@ class NodeNameUtils:  # align to utf8
 	BKT = None;
 
 	def __init__(self):
-		if len(NodeNameUtils.Name2id) == 0 or NodeNameUtils.BKT == None:
-			NodeNameUtils.Build();
+		NodeNameUtils.Build();
 
 	@classmethod
 	def cleanName(cls, name):    # remove brackets and whitespaces
@@ -124,6 +123,7 @@ class NodeNameUtils:  # align to utf8
 
 	@classmethod
 	def Build(cls):
+		if len(NodeNameUtils.Name2id) != 0 and NodeNameUtils.BKT != None: return;
 		print ">>>>> Initalize NodeNameUtils ..."
 
 		if (os.path.exists("./data/Name2id.dat")):
@@ -179,8 +179,7 @@ class WayNameUtils:  # align to utf8
 	BKTree_way = None;
 
 	def __init__(self):
-		if len(WayNameUtils.Name2id_way) == 0 or WayNameUtils.BKTree_way == None:
-			WayNameUtils.Build();
+		WayNameUtils.Build();
 
 	@classmethod
 	def cleanName(cls, name):    # remove brackets and whitespaces
@@ -189,6 +188,7 @@ class WayNameUtils:  # align to utf8
 
 	@classmethod
 	def Build(cls):
+		if len(WayNameUtils.Name2id_way) != 0 and WayNameUtils.BKTree_way != None: return;
 		print ">>>>> Initalize WayNameUtils ..."
 
 		if (os.path.exists("./data/Name2id_way.dat")):
@@ -302,12 +302,12 @@ def test_node2Line():
 
 
 if __name__ == '__main__':
-	NodeNameUtils.Build();
-	WayNameUtils.Build();
+	# NodeNameUtils.Build();
+	# WayNameUtils.Build();
 	# print OtherUtils.StdlizePOIType("高校".decode('utf8'))
 	# DistanceUtils.Build()
-	frompoint = [31.1977664,121.4147976]
-	topoint = [31.2086403, 121.6091085]
+	frompoint = [312657494.0, 1215623103.0]
+	topoint = [312725911.8431407, 1215178677.4843748]
 	print DistanceUtils.spherical_distance(frompoint,topoint)
 	# nu = NodeNameUtils();
 	# print NodeNameUtils.Name2id["中国浦发".decode("utf8")]
