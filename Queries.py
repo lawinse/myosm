@@ -1,13 +1,15 @@
 # -*- coding:utf-8 -*- 
 from Utils import *
+LAZY_START = True
 
 
 class Queries:
 	def __init__(self):
-		DistanceUtils.Build();
-		NodeNameUtils.Build();
-		WayNameUtils.Build();
-		OtherUtils.Build();
+		if not LAZY_START:
+			DistanceUtils.Build();
+			NodeNameUtils.Build();
+			WayNameUtils.Build();
+			OtherUtils.Build();
 	def query1(self, node_id=None,coord=None,node_name=None):  # type(coord)=list 
 		tid = -1;
 		if node_id==None and coord==None and node_name == None:
@@ -64,16 +66,21 @@ class Queries:
 		return all_results;
 
 	def query4(self,poitype,coord,radius):
-		coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
+		# coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
 		poitype = OtherUtils.StdlizePOIType(poitype);
 		Nid2Coord = OtherUtils.GetNid2Coord();
 		dbh = DBHelper();
-		raw = dbh.executeAndFetchAll("select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"'");
-		candidates_nids = [tp[0] for tp in raw];
-		result = []
-		for nid in candidates_nids:
-			if Nid2Coord.has_keys(nid) and DistanceUtils.spherical_distance(coord_int,Nid2Coord[nid]) <= radius:
-				result.append((nid,[Nid2Coord[nid]]))
+
+		raw = dbh.executeAndFetchAll("select id, latitude, longitude, st_distance(point(longitude/1e7, latitude/1e7),point("+str(coord[1])+","+str(coord[0])+"))*111195 as dis "+\
+			"from current_nodes where (id in "+\
+			"(select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"')) having dis<"+str(radius)+ \
+			" order by dis");
+		result = [(tp[0], tp[3], [tp[1],tp[2]])for tp in raw]
+		# candidates_nids = [tp[0] for tp in raw];
+		# result = []
+		# for nid in candidates_nids:
+		# 	if Nid2Coord.has_keys(nid) and DistanceUtils.spherical_distance(coord_int,Nid2Coord[nid]) <= radius:
+		# 		result.append((nid,[Nid2Coord[nid]]))
 		return result;
 
 	def query5(self, coord, k1=8, k2=5):
@@ -125,24 +132,25 @@ class Queries:
 
 	def query_pair_poitype(self,coord,poi1,poi2,order_sensitive=False,num=5):
 		du = DistanceUtils();
-		coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
 		Nid2Coord = OtherUtils.GetNid2Coord();
 		poi1 = OtherUtils.StdlizePOIType(poi1);
 		poi2 = OtherUtils.StdlizePOIType(poi2);
 		dbh = DBHelper();
 		print ">>>>> Searching and Ordering ..."
+		# TODO: remains to be refined
 		raw = dbh.executeAndFetchAll(\
-			"select * from "
+			"select *, st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(v2.longitude/1e7,v2.longitude/1e7))+least(st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point("+str(coord[1])+","+str(coord[0])+")),"+\
+			" st_distance(point(v2.longitude/1e7,v2.latitude/1e7),point("+str(coord[1])+","+str(coord[0])+"))) as dis from "
 			"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi1+"') as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
 			"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi2+"') as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
-			"order by sqrt(pow(v1.latitude/1e7-v2.latitude/1e7,2)+pow(v1.longitude/1e7-v2.longitude/1e7,2)) + sqrt(least(pow(v1.latitude/1e7-"+str(coord[0])+",2)+pow(v1.longitude/1e7-"+str(coord[1])+",2), pow(v2.latitude/1e7-"+str(coord[0])+",2)+pow(v2.longitude/1e7-"+str(coord[1])+",2))) "+\
+			"order by dis "+\
 			"limit 0,"+str(num) if order_sensitive == False else \
-			"select * from "
+			"select *,st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(v2.longitude/1e7,v2.longitude/1e7))+st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point("+str(coord[1])+","+str(coord[0])+"))*111195 as dis from "
 			"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi1+"') as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
 			"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi2+"') as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
-			"order by sqrt(pow(v1.latitude/1e7-v2.latitude/1e7,2)+pow(v1.longitude/1e7-v2.longitude/1e7,2)) + sqrt(pow(v1.latitude/1e7-"+str(coord[0])+",2)+pow(v1.longitude/1e7-"+str(coord[1])+",2)) "+\
+			"order by dis "+\
 			"limit 0,"+str(num)) 
-		data = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]))for tp in raw]
+		data = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]), tp[6])for tp in raw]
 		return data
 
 
@@ -150,6 +158,7 @@ class Queries:
 if __name__ == '__main__':
 	myQuery = Queries();
 	print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=True)
+	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
 	# while 1:
 	# 	a = raw_input();
 	# 	print myQuery.query5(coord=eval(a))
