@@ -156,9 +156,9 @@ class Queries:
 		poitype = OtherUtils.StdlizePOIType(poitype)
 
 		import ctypes
-		if not os.path.exists("./circle_point.so"):
+		if not os.path.exists(WORK_DIR+"circle_point.so"):
 			os.system("g++ -O2 -fPIC -shared circle_point.cpp -o circle_point.so")
-		dll = ctypes.cdll.LoadLibrary('./circle_point.so')
+		dll = ctypes.cdll.LoadLibrary(WORK_DIR+'circle_point.so')
 		solve = dll.solve
 		solve.restype = ctypes.POINTER(ctypes.c_double)
 		solve.argtypes = [ctypes.c_double,ctypes.c_int,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double)]

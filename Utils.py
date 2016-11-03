@@ -13,8 +13,8 @@ sys.setrecursionlimit(10000)
 eps = 1e-7
 coord_scale_default = 1e7
 
-if not os.path.exists("./data"):
-	os.mkdir("./data")
+if not os.path.exists(WORK_DIR+"data"):
+	os.mkdir(WORK_DIR+"data")
 
 class DistanceUtils:
 	kd_tuple = None;
@@ -126,9 +126,9 @@ class NodeNameUtils:  # align to utf8
 		if len(NodeNameUtils.Name2id) != 0 and NodeNameUtils.BKT != None: return;
 		print ">>>>> Initalize NodeNameUtils ..."
 
-		if (os.path.exists("./data/Name2id.dat")):
+		if (os.path.exists(WORK_DIR+"data/Name2id.dat")):
 			print ">>>>> Loading ..."
-			NodeNameUtils.Name2id = joblib.load("./data/Name2id.dat")
+			NodeNameUtils.Name2id = joblib.load(WORK_DIR+"data/Name2id.dat")
 		else:
 			print ">>>>> Generating ..."
 			dbh = DBHelper();
@@ -139,15 +139,15 @@ class NodeNameUtils:  # align to utf8
 					NodeNameUtils.Name2id[cname].append(pair[0])
 				else:
 					NodeNameUtils.Name2id[cname] = [pair[0]];
-			joblib.dump(NodeNameUtils.Name2id,"./data/Name2id.dat",compress=3)
+			joblib.dump(NodeNameUtils.Name2id,WORK_DIR+"data/Name2id.dat",compress=3)
 		
-		if (os.path.exists("./data/BKT.dat")):
+		if (os.path.exists(WORK_DIR+"data/BKT.dat")):
 			print ">>>>> Load BKTree ..."
-			NodeNameUtils.BKT = joblib.load("./data/BKT.dat")
+			NodeNameUtils.BKT = joblib.load(WORK_DIR+"data/BKT.dat")
 		else:
 			print ">>>>> Build BKTree ..."
 			NodeNameUtils.BKT = BKTree(words=NodeNameUtils.Name2id.keys())
-			joblib.dump(NodeNameUtils.BKT,"./data/BKT.dat",compress=3)
+			joblib.dump(NodeNameUtils.BKT,WORK_DIR+"data/BKT.dat",compress=3)
 		print ">>>>> Done Initalization"
 
 
@@ -191,9 +191,9 @@ class WayNameUtils:  # align to utf8
 		if len(WayNameUtils.Name2id_way) != 0 and WayNameUtils.BKTree_way != None: return;
 		print ">>>>> Initalize WayNameUtils ..."
 
-		if (os.path.exists("./data/Name2id_way.dat")):
+		if (os.path.exists(WORK_DIR+"data/Name2id_way.dat")):
 			print ">>>>> Loading ..."
-			WayNameUtils.Name2id_way = joblib.load("./data/Name2id_way.dat")
+			WayNameUtils.Name2id_way = joblib.load(WORK_DIR+"data/Name2id_way.dat")
 		else:
 			print ">>>>> Generating ..."
 			dbh = DBHelper();
@@ -204,15 +204,15 @@ class WayNameUtils:  # align to utf8
 					WayNameUtils.Name2id_way[cname].append(pair[0])
 				else:
 					WayNameUtils.Name2id_way[cname] = [pair[0]];
-			joblib.dump(WayNameUtils.Name2id_way,"./data/Name2id_way.dat",compress=3)
+			joblib.dump(WayNameUtils.Name2id_way,WORK_DIR+"data/Name2id_way.dat",compress=3)
 		
-		if (os.path.exists("./data/BKTree_way.dat")):
+		if (os.path.exists(WORK_DIR+"data/BKTree_way.dat")):
 			print ">>>>> Load BKTree ..."
-			WayNameUtils.BKTree_way = joblib.load("./data/BKTree_way.dat")
+			WayNameUtils.BKTree_way = joblib.load(WORK_DIR+"data/BKTree_way.dat")
 		else:
 			print ">>>>> Build BKTree ..."
 			WayNameUtils.BKTree_way = BKTree(words=WayNameUtils.Name2id_way.keys())
-			joblib.dump(WayNameUtils.BKTree_way,"./data/BKTree_way.dat",compress=3)
+			joblib.dump(WayNameUtils.BKTree_way,WORK_DIR+"data/BKTree_way.dat",compress=3)
 		print ">>>>> Done Initalization"
 
 
@@ -255,23 +255,23 @@ class OtherUtils:
 	def GetNid2Coord():
 		if OtherUtils.Nid_Coord == None:
 			ret = {}
-			if os.path.exists("./data/Nid_Coord.dat"):
+			if os.path.exists(WORK_DIR+"data/Nid_Coord.dat"):
 				print ">>>>> Loading Nid_Coord ..."
-				ret = joblib.load("./data/Nid_Coord.dat");
+				ret = joblib.load(WORK_DIR+"data/Nid_Coord.dat");
 			else:
 				dbh = DBHelper();
 				raw = dbh.executeAndFetchAll("select id, latitude, longitude from current_nodes where visible=1")
 				x = [tp[0] for tp in raw];
 				y = [[tp[1],tp[2]] for tp in raw];
 				ret = dict(zip(x,y))
-				joblib.dump(ret,"./data/Nid_Coord.dat",compress=3)
+				joblib.dump(ret,WORK_DIR+"data/Nid_Coord.dat",compress=3)
 			OtherUtils.Nid_Coord = ret;
 		return OtherUtils.Nid_Coord;
 	@staticmethod
 	def StdlizePOIType(poitype):
 		if OtherUtils.Poi_Mapping == None:
 			OtherUtils.Poi_Mapping = {}
-			with open('./poitype.map','r+') as f1:
+			with open(WORK_DIR+'poitype.map','r+') as f1:
 				for lines in f1.readlines():
 					li = lines.decode('utf8').split();
 					for item in li: OtherUtils.Poi_Mapping[item] = li[0]
@@ -282,9 +282,9 @@ class OtherUtils:
 	def GetRelationFather():
 		if OtherUtils.Relation_Father == None:
 			ret = {}
-			if os.path.exists("./data/Relation_Father.dat"):
+			if os.path.exists(WORK_DIR+"data/Relation_Father.dat"):
 				print ">>>>> Loading Relation_Father ..."
-				ret = joblib.load("./data/Relation_Father.dat");
+				ret = joblib.load(WORK_DIR+"data/Relation_Father.dat");
 			else:
 				dbh = DBHelper();
 				raw = dbh.executeAndFetchAll("select relation_id, member_id from current_relation_members where member_type='Relation'")
@@ -293,7 +293,7 @@ class OtherUtils:
 						ret[tp[1]].append(tp[0]);
 					else:
 						ret[tp[1]] = [tp[0]];
-				joblib.dump(ret,"./data/Relation_Father.dat",compress=3)
+				joblib.dump(ret,WORK_DIR+"data/Relation_Father.dat",compress=3)
 			OtherUtils.Relation_Father = ret;
 		return OtherUtils.Relation_Father;
 def test_node2Line():

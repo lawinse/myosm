@@ -103,9 +103,9 @@ class Routing:
 	@classmethod
 	def Build(cls):
 		if len(Routing.Route) > 0:  return;
-		if os.path.exists("./data/route.dat"):
+		if os.path.exists(WORK_DIR+"data/route.dat"):
 			print ">>>>> Loading Routing dat ..."
-			Routing.Route,Routing.CanRouteFrom = joblib.load("./data/route.dat")
+			Routing.Route,Routing.CanRouteFrom = joblib.load(WORK_DIR+"data/route.dat")
 		else:
 			print ">>>>> Generating Routing dat ..."
 			Routing.Points = {}
@@ -158,7 +158,7 @@ class Routing:
 								if reversible or rt == 'walk':
 									Routing.addPath(i,last,rt,wei);
 					last = i;
-			joblib.dump((Routing.Route,Routing.CanRouteFrom),"./data/route.dat", compress = 3)
+			joblib.dump((Routing.Route,Routing.CanRouteFrom),WORK_DIR+"data/route.dat", compress = 3)
 
 		print ">>>>> Generating Routing KDTree ..."
 		# Nid2Coord = OtherUtils.GetNid2Coord();

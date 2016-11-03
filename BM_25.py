@@ -8,8 +8,8 @@ from sklearn.externals import joblib
 import os
 
 
-if not os.path.exists("./data"):
-	os.mkdir("./data")
+if not os.path.exists(WORK_DIR+"data"):
+	os.mkdir(WORK_DIR+"data")
 
 class BM_25:
 	BM_MDL_ND = None;
@@ -19,7 +19,7 @@ class BM_25:
 	def Build(cls, typ):
 		if typ == 'Node' and BM_25.BM_MDL_ND != None: return
 		if typ == 'Way' and BM_25.BM_MDL_WAY != None: return 
-		if not os.path.exists("./data/BM_25_"+typ+".mdl"):
+		if not os.path.exists(WORK_DIR+"data/BM_25_"+typ+".mdl"):
 			from Utils import NodeNameUtils, WayNameUtils
 			print ">>>>> Building BM_25 Model ..."
 			dbh = DBHelper();
@@ -57,7 +57,7 @@ class BM_25:
 				DocIDF[term] = math.log((N - DF[term] +0.5) / (DF[term] + 0.5), math.e)
 			DocAvglen = docTtlLen/N;
 			mdl = [N,DocAvglen,Doc2DocTF_id,DocTF,DocIDF,Dic];
-			joblib.dump(mdl, "./data/BM_25_"+typ+".mdl", compress=3)
+			joblib.dump(mdl, WORK_DIR+"data/BM_25_"+typ+".mdl", compress=3)
 			if typ == "Node":
 				BM_25.BM_MDL_ND = mdl;
 			else:
@@ -65,9 +65,9 @@ class BM_25:
 		else:
 			print ">>>>> Loading BM_25 Model ..."
 			if typ == "Node":
-				BM_25.BM_MDL_ND = joblib.load("./data/BM_25_"+typ+".mdl");
+				BM_25.BM_MDL_ND = joblib.load(WORK_DIR+"data/BM_25_"+typ+".mdl");
 			else:
-				BM_25.BM_MDL_WAY = joblib.load("./data/BM_25_"+typ+".mdl");
+				BM_25.BM_MDL_WAY = joblib.load(WORK_DIR+"data/BM_25_"+typ+".mdl");
 		print ">>>>> Done Initialization"
 	def __init__(self, typ):
 		assert(typ in ['Node','Way'])

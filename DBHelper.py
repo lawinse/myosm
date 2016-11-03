@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-  
 import sys,os
+from Config import WORK_DIR
 reload(sys)
 sys.setdefaultencoding("utf-8")
 import MySQLdb
@@ -67,9 +68,9 @@ class DBHelper:
 		print "#########\n\n"
 	@classmethod
 	def DumpLog(cls):
-		if not os.path.exists("./log"): os.mkdir("./log")
-		mode = 'w+' if not os.path.exists("./log/sqlquery"+cls.START_AT+".log") else "a";
-		f = open("./log/sqlquery"+cls.START_AT+".log",mode);
+		if not os.path.exists(WORK_DIR+"log"): os.mkdir(WORK_DIR+"log")
+		mode = 'w+' if not os.path.exists(WORK_DIR+"log/sqlquery"+cls.START_AT+".log") else "a";
+		f = open(WORK_DIR+"log/sqlquery"+cls.START_AT+".log",mode);
 		for line in cls.LOGGER[:-10]:
 			f.write('>  '+line+'\n');
 		f.close()
