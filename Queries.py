@@ -153,15 +153,10 @@ class Queries:
 		data = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]), tp[6])for tp in raw]
 		return data
 	def query_most_poi_within_radius(self, poitype,radius):
+		import ctypes
 		poitype = OtherUtils.StdlizePOIType(poitype)
 
-		import ctypes
-		if not os.path.exists(WORK_DIR+"circle_point.so"):
-			os.system("g++ -O2 -fPIC -shared "+WORK_DIR+"circle_point.cpp -o "+WORK_DIR+"circle_point.so")
-		dll = ctypes.cdll.LoadLibrary(WORK_DIR+'circle_point.so')
-		solve = dll.solve
-		solve.restype = ctypes.POINTER(ctypes.c_double)
-		solve.argtypes = [ctypes.c_double,ctypes.c_int,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double)]
+		solve = OtherUtils.GetCirclePointSolver();
 
 		dbh = DBHelper();
 		raw = dbh.executeAndFetchAll("select id, latitude, longitude from current_nodes where id in (select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"')");
@@ -174,7 +169,7 @@ class Queries:
 		count = int(res[0])
 		return ([res[1]*DistanceUtils.coord_scale,res[2]*DistanceUtils.coord_scale],count)
 
-	def query_middle_poi(self,coord1,coord2,poitype,sum_tolerate=0.2,diff_tolerate=0.1,num=2):
+	def query_middle_poi(self,coord1,coord2,poitype,sum_tolerate=0.2,diff_tolerate=0.1,order_sensitive = False,num=2):
 		poitype = OtherUtils.StdlizePOIType(poitype);
 		line_dis_max = DistanceUtils.spherical_distance(coord1,coord2)*(1+sum_tolerate);
 		# print line_dis_max
@@ -190,16 +185,27 @@ class Queries:
 			"from (select id, latitude, longitude from current_nodes where id in "+\
 			"(select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"')) as a "+\
 			"having dis1+dis2<"+str(line_dis_max)+" and abs(dis1-dis2)<least(dis1,dis2)*"+str(diff_tolerate)+\
-			" order by st_distance(point(a.longitude/1e7,a.latitude/1e7),point("+coordmid_str+")) limit 0,"+str(num));
+			(" and dis1 > dis2 " if order_sensitive else " ") +\
+			"order by st_distance(point(a.longitude/1e7,a.latitude/1e7),point("+coordmid_str+")) limit 0,"+str(num));
 
 		return [(tp[0],[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
+
+	def query_poi_node_name_nearby(self,coord,poi_name,num=10):
+		nu = NodeNameUtils();
+		print ">>>>> Searching ..."
+		node_list = nu.findIsA(poi_name)
+		coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
+		node_list = [(tp[0],tp[1],tp[2],DistanceUtils.spherical_distance(coord_int,tp[1])) for tp in node_list]
+		return sorted(node_list,key=lambda node:node[3])[:num]
 
 
 
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	print myQuery.query_most_poi_within_radius("住宅区".decode('utf8'),5000)
+	print myQuery.query_poi_node_name_nearby([31.1981978,121.4152321],"联通营业厅".decode('utf8'))
+	# print myQuery.query_most_poi_within_radius("大型购物".decode('utf8'),2000)
+	# print myQuery.query_most_poi_within_radius("金融".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
 	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)
 	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)

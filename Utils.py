@@ -151,19 +151,39 @@ class NodeNameUtils:  # align to utf8
 		print ">>>>> Done Initalization"
 
 
-	def findSim(self,s1):   # return none indicates nothing ever matches
+	def findSim(self,s1,cand_num=5,max_dis=None):   # return none indicates nothing ever matches
 		s1 = NodeNameUtils.cleanName(s1)
 		if (NodeNameUtils.Name2id.has_key(s1)):
 			return [(s1,0,NodeNameUtils.Name2id[s1])];
 		else:
-			data = NodeNameUtils.BKT.query(s1,3);
-			if len(data) > 0:
-				return [(data[i][1],data[i][0],NodeNameUtils.Name2id[data[i][1]]) for i in range(min(5,len(data)))]
-			else: 
-				data = NodeNameUtils.BKT.query(s1,5);
+			if max_dis == None:
+				data = NodeNameUtils.BKT.query(s1,3);
 				if len(data) > 0:
-					return [(data[i][1],data[i][0],NodeNameUtils.Name2id[data[i][1]]) for i in range(min(5,len(data)))]
+					return [(data[i][1],data[i][0],NodeNameUtils.Name2id[data[i][1]]) for i in range(min(cand_num,len(data)))]
+				else: 
+					data = NodeNameUtils.BKT.query(s1,5);
+					if len(data) > 0:
+						return [(data[i][1],data[i][0],NodeNameUtils.Name2id[data[i][1]]) for i in range(min(cand_num,len(data)))]
+			else:
+				data = NodeNameUtils.BKT.query(s1,max_dis);
+				if len(data) > 0:
+					return [(data[i][1],data[i][0],NodeNameUtils.Name2id[data[i][1]]) for i in range(min(cand_num,len(data)))]
 		return None
+	def findIsA(self,s1):
+		import jieba
+		Nid_Coord = OtherUtils.GetNid2Coord();
+		like_str = "%".join(jieba.cut(s1));
+		like_str = "%"+like_str+"%";
+		dbh = DBHelper();
+		raw = dbh.executeAndFetchAll("select distinct v from current_node_tags where (k='name' or k='name:zh') and v like '" + like_str+"'")
+
+		thisNameSet = set([tp[0] for tp in raw]) | set([tp[0] for tp in self.findSim(s1,max_dis=5,cand_num=sys.maxint)])
+		result = []
+		for name in thisNameSet:
+			for nid in NodeNameUtils.Name2id[NodeNameUtils.cleanName(name)]:
+				result.append((nid,Nid_Coord[nid],name));
+		return result
+
 	def getMostSim(self,s1,num=1):
 		ret = self.findSim(s1);
 		if ret == None: return None;
@@ -245,11 +265,14 @@ class OtherUtils:
 	Nid_Coord = None
 	Relation_Father = None
 	Poi_Mapping = None
+	Circle_Point_Solver = None;
 	@staticmethod
 	def Build():
 		print ">>>>> Initalize OtherUtils ..."
 		OtherUtils.GetRelationFather();
 		OtherUtils.GetNid2Coord();
+		OtherUtils.GetCirclePointSolver();
+		OtherUtils.StdlizePOIType();
 		print ">>>>> Done Initalization"
 	@staticmethod
 	def GetNid2Coord():
@@ -296,6 +319,18 @@ class OtherUtils:
 				joblib.dump(ret,WORK_DIR+"data/Relation_Father.dat",compress=3)
 			OtherUtils.Relation_Father = ret;
 		return OtherUtils.Relation_Father;
+	@staticmethod
+	def GetCirclePointSolver():
+		if OtherUtils.Circle_Point_Solver == None:
+			import ctypes
+			if not os.path.exists(WORK_DIR+"circle_point.so"):
+				os.system("g++ -O2 -fPIC -shared "+WORK_DIR+"circle_point.cpp -o "+WORK_DIR+"circle_point.so")
+			dll = ctypes.cdll.LoadLibrary(WORK_DIR+'circle_point.so')
+			solve = dll.solve
+			solve.restype = ctypes.POINTER(ctypes.c_double)
+			solve.argtypes = [ctypes.c_double,ctypes.c_int,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double)]
+			OtherUtils.Circle_Point_Solver = solve;
+		return OtherUtils.Circle_Point_Solver;
 def test_node2Line():
 	ds = DistanceUtils();
 	ds.node2Line()
