@@ -38,7 +38,7 @@ class DBHelper:
 			data = self.cursor.fetchmany(num);
 		return data;
 	def execute(self, sql, params=None, need_commit=False):
-		DBHelper.LOGGER.append(sql+("  params:"+str(params)) if params != None else "");
+		DBHelper.LOGGER.append(sql+(("  params:"+str(params)) if params != None else ""));
 		if need_commit:
 			try:
 				self.cursor.execute(sql) if params == None else self.cursor.execute(sql,params);
