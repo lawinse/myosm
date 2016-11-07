@@ -16,7 +16,7 @@ class DBHelper:
 	def Build(cls):
 		cls.DBC = MySQLdb.connect(host="localhost",user="osm",passwd="osm",db="api06_test",charset='utf8');
 		cls.LOGGER = [];
-		cls.LOG_CAP = 20
+		cls.LOG_CAP = 30
 		cls.START_AT = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 	def __init__(self):
 		try:
@@ -26,20 +26,22 @@ class DBHelper:
 			self.cursor = DBHelper.DBC.cursor();
 	def __del__(self):
 		self.cursor.close();
-	def executeAndFetchAll(self, sql):
-		self.execute(sql);
-		data = self.cursor.fetchall();
-		return data;
+	def executeAndFetchAll(self, sql, params=None):
+		if self.execute(sql,params):
+			data = self.cursor.fetchall();
+			return data;
+		return None;
 	def fetchNext(self,num=1):
 		if num==1:
 			data = self.cursor.fetchone();
 		else:
 			data = self.cursor.fetchmany(num);
 		return data;
-	def execute(self, sql, need_commit=False):
+	def execute(self, sql, params=None, need_commit=False):
+		DBHelper.LOGGER.append(sql+("  params:"+str(params)) if params != None else "");
 		if need_commit:
 			try:
-				self.cursor.execute(sql);
+				self.cursor.execute(sql) if params == None else self.cursor.execute(sql,params);
 				DBHelper.DBC.commit();
 				status = 'Successful'
 			except:
@@ -48,37 +50,40 @@ class DBHelper:
 				status = 'Failed'
 		else:
 			try:
-				self.cursor.execute(sql);
+				self.cursor.execute(sql) if params == None else self.cursor.execute(sql,params);
 				status = 'Successful'
 			except:
 				DBHelper.PrintLog();
 				status = 'Failed'
-		DBHelper.LOGGER.append("["+status+"] "+sql);
+		DBHelper.LOGGER[-1] = "["+status+"] "+DBHelper.LOGGER[-1];
 		if (len(DBHelper.LOGGER) >= DBHelper.LOG_CAP or status == "Failed"):
 			DBHelper.DumpLog()
+		return status == 'Successful'
 	def batchExecute(self, sqls):
 		for i in range(len(sqls)-1):
 			self.execute(sqls[i]);
 		self.execute(sqls[-1],need_commit=True);
 	@classmethod
 	def PrintLog(cls,num = 10):
-		print "\n\n###### Query Log #######"
+		print "\n###### Query Log #######"
 		cnt = num;
 		i = len(DBHelper.LOGGER)-1;
 		while(i>=0 and cnt > 0):
 			print DBHelper.LOGGER[i];
 			i-=1;
 			cnt-=1;
-		print "#########\n\n"
+		print "#########\n"
 	@classmethod
 	def DumpLog(cls):
 		if not os.path.exists(WORK_DIR+"log"): os.mkdir(WORK_DIR+"log")
 		mode = 'w+' if not os.path.exists(WORK_DIR+"log/sqlquery"+cls.START_AT+".log") else "a";
 		f = open(WORK_DIR+"log/sqlquery"+cls.START_AT+".log",mode);
-		for line in cls.LOGGER[:-10]:
+		l = len(cls.LOGGER);
+		if l > 10: l-=10;
+		for line in cls.LOGGER[:l]:
 			f.write('>  '+line+'\n');
 		f.close()
-		cls.LOGGER = cls.LOGGER[cls.LOG_CAP-10:]
+		cls.LOGGER = cls.LOGGER[l:]
 		
 
 		
@@ -86,7 +91,7 @@ class DBHelper:
 if __name__ == '__main__':
 	dbh = DBHelper();
 	for i in range(100):
-		dbh.executeAndFetchAll("select * from current_relation_members limit 0,10"+("" if i != 13 else "dsad"));
+		dbh.executeAndFetchAll("select * from current_nodes where id=%s",params=(26609107+i,));
 	# poi1 = '酒店'.decode('utf8')
 	# poi2 = '加油加气站'.decode('utf8')
 	# num=5

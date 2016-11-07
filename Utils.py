@@ -175,7 +175,7 @@ class NodeNameUtils:  # align to utf8
 		like_str = "%".join(jieba.cut(s1));
 		like_str = "%"+like_str+"%";
 		dbh = DBHelper();
-		raw = dbh.executeAndFetchAll("select distinct v from current_node_tags where (k='name' or k='name:zh') and v like '" + like_str+"'")
+		raw = dbh.executeAndFetchAll("select distinct v from current_node_tags where (k='name' or k='name:zh') and v like %s",params=(like_str,))
 
 		thisNameSet = set([tp[0] for tp in raw]) | set([tp[0] for tp in self.findSim(s1,max_dis=5,cand_num=sys.maxint)])
 		result = []

@@ -5,6 +5,8 @@ import datetime
 from DBHelper import *
 import gc
 
+## Internally use free of SQL injection
+
 def bracketen(a):
 	try:
 		return '"' + str(a) + '"'
@@ -144,6 +146,7 @@ class OsmGenerator:
 	Default_header = "<?xml version='1.0' encoding='UTF-8'?>\n<osm version='0.6' generator='OsmGenerator'>\n";
 	Default_tailer = "</osm>";
 	def __init__(self,fname,minLat, maxLat, minLon, maxLon):
+		assert((type(minLon),type(maxLon),type(minLat),type(maxLat)) == (float,float,float,float))
 		import time
 		self.f = open(fname,"w+");
 		self.f.write(OsmGenerator.Default_header);

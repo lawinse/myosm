@@ -25,7 +25,7 @@ class Queries:
 		else:
 			tid = node_id;
 		dbh = DBHelper();
-		result = dbh.executeAndFetchAll("select distinct id from current_way_nodes where node_id="+str(tid));
+		result = dbh.executeAndFetchAll("select distinct id from current_way_nodes where node_id=%s",params=(tid,));
 		isIntersection = len(result) > 1;
 		way_list = [tp[0] for tp in result];
 		return (tid, way_list, isIntersection)
@@ -34,7 +34,7 @@ class Queries:
 		if way_id == None:
 			return None;
 		dbh = DBHelper();
-		result = dbh.executeAndFetchAll("select node_id,sequence_id from current_way_nodes where id="+str(way_id)+" order by sequence_id");
+		result = dbh.executeAndFetchAll("select node_id,sequence_id from current_way_nodes where id=%s order by sequence_id",params=(way_id,));
 		node_list = [tp[0] for tp in result];
 		Nid2Coord = OtherUtils.GetNid2Coord();
 		node_list = [(nid, Nid2Coord[nid]) for nid in node_list];
@@ -57,7 +57,7 @@ class Queries:
 			wid_li = item[2];
 			wn_li = [wn, len(wid_li)];
 			for way_id in wid_li:
-				raw = dbh.executeAndFetchAll("select node_id,sequence_id from current_way_nodes where id="+str(way_id)+" order by sequence_id");
+				raw = dbh.executeAndFetchAll("select node_id,sequence_id from current_way_nodes where id=%s order by sequence_id",params=(way_id,));
 				# attention!!
 				node_li = [(tp[0],Nid2Coord.get(tp[0],None))for tp in raw]
 				theSeg = [way_id,node_li];
@@ -71,10 +71,10 @@ class Queries:
 		Nid2Coord = OtherUtils.GetNid2Coord();
 		dbh = DBHelper();
 
-		raw = dbh.executeAndFetchAll("select id, latitude, longitude, st_distance(point(longitude/1e7, latitude/1e7),point("+str(coord[1])+","+str(coord[0])+"))*111195 as dis "+\
+		raw = dbh.executeAndFetchAll("select id, latitude, longitude, st_distance(point(longitude/1e7, latitude/1e7),point(%s,%s))*111195 as dis "+\
 			"from current_nodes where (id in "+\
-			"(select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"')) having dis<"+str(radius)+ \
-			" order by dis");
+			"(select distinct node_id from current_node_tags where k='poitype' and v=%s)) having dis<%s"+ \
+			" order by dis", params=(coord[1],coord[0],poitype,radius,));
 		result = [(tp[0], tp[3], [tp[1],tp[2]])for tp in raw]
 		# candidates_nids = [tp[0] for tp in raw];
 		# result = []
@@ -96,7 +96,7 @@ class Queries:
 
 		for i in range(k1):
 			neigh_nid = raw[0][i][0];
-			tmp = dbh.executeAndFetchAll("select id,sequence_id from current_way_nodes where node_id="+str(neigh_nid));
+			tmp = dbh.executeAndFetchAll("select id,sequence_id from current_way_nodes where node_id=%s",params=(neigh_nid,));
 			for tp in tmp:
 				if not wayid_middleSeq.has_key(tp[0]):
 					wayid_middleSeq[tp[0]] = tp[1];
@@ -108,7 +108,8 @@ class Queries:
 			lm = max(mid_seq-k2,1);
 			rm = lm+2*k2
 			tmp = dbh.executeAndFetchAll("select node_id, sequence_id from current_way_nodes"+ \
-					" where id="+str(way_id)+" and sequence_id>="+str(lm)+" and sequence_id<="+str(rm)+" order by sequence_id")
+					" where id=%s and sequence_id>=%s and sequence_id<=%s order by sequence_id",\
+					params=(way_id,lm,rm,))
 			dbh.PrintLog(1);
 			way_nids = [tp[0] for tp in tmp]
 			way_line_coord = [Nid2Coord[item] for item in way_nids];
@@ -139,17 +140,16 @@ class Queries:
 		print ">>>>> Searching and Ordering ..."
 		# TODO: remains to be refined
 		raw = dbh.executeAndFetchAll(\
-			"select *, st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(v2.longitude/1e7,v2.longitude/1e7))+least(st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point("+str(coord[1])+","+str(coord[0])+")),"+\
-			" st_distance(point(v2.longitude/1e7,v2.latitude/1e7),point("+str(coord[1])+","+str(coord[0])+"))) as dis from "
-			"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi1+"') as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
-			"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi2+"') as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
-			"order by dis "+\
-			"limit 0,"+str(num) if order_sensitive == False else \
-			"select *,st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(v2.longitude/1e7,v2.longitude/1e7))+st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point("+str(coord[1])+","+str(coord[0])+"))*111195 as dis from "
-			"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi1+"') as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
-			"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v='"+poi2+"') as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
-			"order by dis "+\
-			"limit 0,"+str(num)) 
+			"select *, st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(v2.longitude/1e7,v2.longitude/1e7))+least(st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(%s,%s)),"+\
+			" st_distance(point(v2.longitude/1e7,v2.latitude/1e7),point(%s,%s))) as dis from "
+			"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v=%s) as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
+			"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v=%s) as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
+			"order by dis limit 0,%s" if order_sensitive == False else \
+			"select *,st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(v2.longitude/1e7,v2.longitude/1e7))+st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(%s,%s))*111195 as dis from "
+			"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v=%s) as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
+			"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v=%s) as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
+			"order by dis limit 0,%s",\
+			params = (coord[1],coord[0],coord[1],coord[0],poi1,poi2,num,) if order_sensitive == False else (coord[1],coord[0],poi1,poi2,num)) 
 		data = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]), tp[6])for tp in raw]
 		return data
 	def query_most_poi_within_radius(self, poitype,radius):
@@ -159,7 +159,8 @@ class Queries:
 		solve = OtherUtils.GetCirclePointSolver();
 
 		dbh = DBHelper();
-		raw = dbh.executeAndFetchAll("select id, latitude, longitude from current_nodes where id in (select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"') order by latitude,longitude");
+		raw = dbh.executeAndFetchAll("select id, latitude, longitude from current_nodes where id in "+\
+			"(select distinct node_id from current_node_tags where k='poitype' and v=%s) order by latitude,longitude",params=(poitype,));
 		x = [tp[1]/DistanceUtils.coord_scale for tp in raw];
 		y = [tp[2]/DistanceUtils.coord_scale for tp in raw];
 		num_numbers = len(x)
@@ -174,19 +175,17 @@ class Queries:
 		line_dis_max = DistanceUtils.spherical_distance(coord1,coord2)*(1+sum_tolerate);
 		# print line_dis_max
 		dbh = DBHelper();
-		coord1_str = "%f,%f" %(coord1[1],coord1[0])
-		coord2_str = "%f,%f" %(coord2[1],coord2[0])
-		coordmid_str = "%f,%f" %(0.5*(coord2[1]+coord1[1]),0.5*(coord2[0]+coord1[0]))
 
 		print ">>>>> Searching ..."
 		raw = dbh.executeAndFetchAll("select a.id, a.latitude, a.longitude, "+\
-			"st_distance(point(a.longitude/1e7,a.latitude/1e7),point("+coord1_str+"))*111195 as dis1, "+\
-			"st_distance(point(a.longitude/1e7,a.latitude/1e7),point("+coord2_str+"))*111195 as dis2 "+\
+			"st_distance(point(a.longitude/1e7,a.latitude/1e7),point(%s,%s))*111195 as dis1, "+\
+			"st_distance(point(a.longitude/1e7,a.latitude/1e7),point(%s,%s))*111195 as dis2 "+\
 			"from (select id, latitude, longitude from current_nodes where id in "+\
-			"(select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"')) as a "+\
-			"having dis1+dis2<"+str(line_dis_max)+" and abs(dis1-dis2)<least(dis1,dis2)*"+str(diff_tolerate)+\
+			"(select distinct node_id from current_node_tags where k='poitype' and v=%s)) as a "+\
+			"having dis1+dis2<%s and abs(dis1-dis2)<least(dis1,dis2)*%s"+\
 			(" and dis1 > dis2 " if order_sensitive else " ") +\
-			"order by st_distance(point(a.longitude/1e7,a.latitude/1e7),point("+coordmid_str+")) limit 0,"+str(num));
+			"order by st_distance(point(a.longitude/1e7,a.latitude/1e7),point(%s,%s)) limit 0,%s",\
+			params=(coord1[1],coord1[0],coord2[1],coord2[0],poitype,line_dis_max,diff_tolerate,0.5*(coord2[1]+coord1[1]),0.5*(coord2[0]+coord1[0]),num,));
 
 		return [(tp[0],[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
 
@@ -203,10 +202,10 @@ class Queries:
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"东北".decode('utf8'))
+	print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
 	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"地铁站".decode('utf8'))
-	print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
-	# print myQuery.query_most_poi_within_radius("金融".decode('utf8'),1000)
+	# print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
+	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
 	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)
 	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
