@@ -16,7 +16,7 @@ class DBHelper:
 	def Build(cls):
 		cls.DBC = MySQLdb.connect(host="localhost",user="osm",passwd="osm",db="api06_test",charset='utf8');
 		cls.LOGGER = [];
-		cls.LOG_CAP = 50
+		cls.LOG_CAP = 20
 		cls.START_AT = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 	def __init__(self):
 		try:
@@ -54,8 +54,12 @@ class DBHelper:
 				DBHelper.PrintLog();
 				status = 'Failed'
 		DBHelper.LOGGER.append("["+status+"] "+sql);
-		if (len(DBHelper.LOGGER) > DBHelper.LOG_CAP):
+		if (len(DBHelper.LOGGER) >= DBHelper.LOG_CAP or status == "Failed"):
 			DBHelper.DumpLog()
+	def batchExecute(self, sqls):
+		for i in range(len(sqls)-1):
+			self.execute(sqls[i]);
+		self.execute(sqls[-1],need_commit=True);
 	@classmethod
 	def PrintLog(cls,num = 10):
 		print "\n\n###### Query Log #######"

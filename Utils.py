@@ -323,8 +323,8 @@ class OtherUtils:
 	def GetCirclePointSolver():
 		if OtherUtils.Circle_Point_Solver == None:
 			import ctypes
-			if not os.path.exists(WORK_DIR+"circle_point.so"):
-				os.system("g++ -O2 -fPIC -shared "+WORK_DIR+"circle_point.cpp -o "+WORK_DIR+"circle_point.so")
+			# if not os.path.exists(WORK_DIR+"circle_point.so"):
+			os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+WORK_DIR+"circle_point.cpp -o "+WORK_DIR+"circle_point.so")
 			dll = ctypes.cdll.LoadLibrary(WORK_DIR+'circle_point.so')
 			solve = dll.solve
 			solve.restype = ctypes.POINTER(ctypes.c_double)

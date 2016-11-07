@@ -6,8 +6,8 @@ using namespace std;
 #define R 6370996.81
 
 struct Point{
+	int id;
     double angle;
-    int id;
     double t_angle;
     bool operator < (const Point& a)const{
         return angle!=a.angle?angle<a.angle:id>a.id;
@@ -26,22 +26,22 @@ double ew(double a, double b, double c){
 	return a;
 }
 
-double oi(double a){
+inline double oi(double a){
 	return PI*a/180;
 }
 
-double io(double a){
+inline double io(double a){
 	return a*180/PI;
 }
-double Td(double a, double b, double c, double d){
+inline double Td(double a, double b, double c, double d){
 	return R * acos(sin(c) * sin(d) + cos(c) * cos(d) * cos(b - a));
 }
 
-double dist(double x1, double y1, double x2, double y2) {
-    y1 = ew(y1,-180,180);
-    x1 = lw(x1,-74,74);
-    y2 = ew(y2,-180,180);
-    x2 = lw(x2,-74,74);
+inline double dist(double x1, double y1, double x2, double y2) {
+    // y1 = ew(y1,-180,180);
+    // x1 = lw(x1,-74,74);
+    // y2 = ew(y2,-180,180);
+    // x2 = lw(x2,-74,74);
     return Td(oi(y1),oi(y2),oi(x1),oi(x2));
 }
 extern "C"{
@@ -52,7 +52,7 @@ extern "C"{
 		int ans = 1, ans_id = -1;
 		double ans_x = -1,ans_y = -1;
 		int i,j,k,tot;
-		for (i=0; i<3; ++i){
+		for (i=0; i<n; ++i){
 			for (j=k=0; j<n; ++j) {
 				if (j == i || dist(px[i],py[i],px[j],py[j]) > (2*r)) continue;
 				double angle = atan2(py[i]-py[j],px[i]-px[j]);

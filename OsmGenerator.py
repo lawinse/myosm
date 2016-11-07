@@ -22,9 +22,7 @@ def wrapOsm(name, header, body=None):
 		builder += "/>"
 	else:
 		builder += ">\n"
-		body = body.rstrip();
-		body = "\n\t".join(body.split("\n"));
-		body = "\t" + body;
+		body = batchIndent(body);
 		builder += body.rstrip()+"\n"+"</"+name+">"
 	return builder;
 class Point:
@@ -146,6 +144,7 @@ class OsmGenerator:
 	Default_header = "<?xml version='1.0' encoding='UTF-8'?>\n<osm version='0.6' generator='OsmGenerator'>\n";
 	Default_tailer = "</osm>";
 	def __init__(self,fname,minLat, maxLat, minLon, maxLon):
+		import time
 		self.f = open(fname,"w+");
 		self.f.write(OsmGenerator.Default_header);
 		header = 'minlon='+bracketen(minLon)+\
@@ -161,48 +160,48 @@ class OsmGenerator:
 		self.Points = {};
 		self.Ways = {};
 		self.Relations = {};
+		self.Timestamp = "%d" % (time.time()*1000);
 
 
 	def create_new_nodes(self):
 		dbh = DBHelper();
-		dbh.execute("create or replace view new_nodes as (select * from current_nodes where "+\
+		dbh.execute("create or replace view new_nodes_"+self.Timestamp+" as (select * from current_nodes where "+\
 			"latitude>="+str(self.minLat)+" and "\
 			"latitude<="+str(self.maxLat)+" and "\
 			"longitude>="+str(self.minLon)+" and "\
 			"longitude<="+str(self.maxLon)+")", need_commit = True);
-		raw = dbh.executeAndFetchAll("select * from new_nodes");
+		raw = dbh.executeAndFetchAll("select * from new_nodes_"+self.Timestamp);
 		for tp in raw:
 			self.Points[tp[0]] = Point(id=tp[0],lat=tp[1],lon=tp[2],visible=tp[4],version=tp[7],changeset=tp[3],timestamp=tp[5])
-		raw = dbh.executeAndFetchAll("select * from current_node_tags where node_id in (select id from new_nodes)");
+		raw = dbh.executeAndFetchAll("select * from current_node_tags where node_id in (select id from new_nodes_"+self.Timestamp+")");
 		for tp in raw:
 			self.Points[tp[0]].addTags(tp[1],tp[2]);
 	def create_new_ways(self):
 		dbh = DBHelper();
-		dbh.execute("create or replace view new_way_nodes as "+\
-			"(select * from current_way_nodes where node_id in (select id from new_nodes))", need_commit = True);
-		raw = dbh.executeAndFetchAll("select * from current_ways where id in (select distinct id from new_way_nodes)");
+		dbh.execute("create or replace view new_way_nodes_"+self.Timestamp+" as "+\
+			"(select * from current_way_nodes where node_id in (select id from new_nodes_"+self.Timestamp+"))", need_commit = True);
+		raw = dbh.executeAndFetchAll("select * from current_ways where id in (select distinct id from new_way_nodes_"+self.Timestamp+")");
 		for tp in raw:
 			self.Ways[tp[0]] = Way(id=tp[0],visible=tp[3],version=tp[4],changeset=tp[1],timestamp=tp[2]);
-		raw = dbh.executeAndFetchAll("select * from new_way_nodes");
+		raw = dbh.executeAndFetchAll("select * from new_way_nodes_"+self.Timestamp);
 		for tp in raw:
 			self.Ways[tp[0]].addNodes(tp[2],tp[1]);
-		raw = dbh.executeAndFetchAll("select * from current_way_tags where way_id in (select distinct id from new_way_nodes)");
+		raw = dbh.executeAndFetchAll("select * from current_way_tags where way_id in (select distinct id from new_way_nodes_"+self.Timestamp+")");
 		for tp in raw:
 			self.Ways[tp[0]].addTags(tp[1],tp[2]);
 
 	def create_new_relations(self):
 		from collections import deque;
 		dbh = DBHelper();
-		# dbh.execute("drop table if exists new_relation_members",need_commit=True);
-		dbh.execute("create or replace view new_relation_members as "+\
-			"(select * from current_relation_members where (member_type='Node' and member_id in (select id from new_nodes)) "+\
-			"or (member_type='Way' and member_id in (select distinct id from new_way_nodes)))", need_commit = True);
+		dbh.execute("create or replace view new_relation_members_"+self.Timestamp+" as "+\
+			"(select * from current_relation_members where (member_type='Node' and member_id in (select id from new_nodes_"+self.Timestamp+")) "+\
+			"or (member_type='Way' and member_id in (select distinct id from new_way_nodes_"+self.Timestamp+")))", need_commit = True);
 		rf = OtherUtils.GetRelationFather();
 
 
 		# must reclusively cover relations
 		relation_child2father=[];
-		raw = dbh.executeAndFetchAll("select distinct relation_id from new_relation_members");
+		raw = dbh.executeAndFetchAll("select distinct relation_id from new_relation_members_"+self.Timestamp+"");
 
 
 
@@ -217,12 +216,11 @@ class OsmGenerator:
 						start_visit.add(fa);
 						relation_child2father.append((tmp,fa));
 		if len(relation_child2father)>0:
-			dbh.execute("drop table if exists new_relation_fathers",need_commit=True);
+			dbh.execute("drop table if exists new_relation_fathers_"+self.Timestamp,need_commit=True);
 			sql = \
-			'''create table new_relation_fathers (
-			relation_id bigint(64) NOT NULL ,
-			father_id bigint(64) NOT NULL)
-			'''
+			"create table new_relation_fathers_"+self.Timestamp+" ("+\
+			"relation_id bigint(64) NOT NULL ,"+\
+			"father_id bigint(64) NOT NULL)"
 			dbh.execute(sql,need_commit=True);
 			values = ""
 			for pair in relation_child2father:
@@ -230,27 +228,27 @@ class OsmGenerator:
 			values = values[:-1];
 
 			sql = \
-			"insert into new_relation_fathers(relation_id,father_id) values " + values;
+			"insert into new_relation_fathers_"+self.Timestamp+"(relation_id,father_id) values " + values;
 			dbh.execute(sql,need_commit=True);
 
 
 
 		raw = dbh.executeAndFetchAll("select * from current_relations "+\
-			"where relation_id in (select distinct relation_id from new_relation_members)"+\
-			" or relation_id in (select distinct father_id from new_relation_fathers)");
+			"where relation_id in (select distinct relation_id from new_relation_members_"+self.Timestamp+")"+\
+			" or relation_id in (select distinct father_id from new_relation_fathers_"+self.Timestamp+")");
 		for tp in raw:
 			self.Relations[tp[0]] = Relation(id=tp[0],visible=tp[3],version=tp[4],changeset=tp[1],timestamp=tp[2]);
 
 		raw = dbh.executeAndFetchAll("select * from current_relation_tags "+\
-			"where id in (select distinct relation_id from new_relation_members)"+\
-			" or id in (select distinct father_id from new_relation_fathers)");
+			"where id in (select distinct relation_id from new_relation_members_"+self.Timestamp+")"+\
+			" or id in (select distinct father_id from new_relation_fathers_"+self.Timestamp+")");
 		for tp in raw:
 			self.Relations[tp[0]].addTags(tp[1],tp[2]);
 
-		raw = dbh.executeAndFetchAll("select * from new_relation_members");
+		raw = dbh.executeAndFetchAll("select * from new_relation_members_"+self.Timestamp);
 		for tp in raw:
 			self.Relations[tp[0]].addMembers(tp[4],tp[1],tp[2],tp[3]);
-		raw = dbh.executeAndFetchAll("select a.relation_id, a.member_type, a.member_id, a.member_role, a.sequence_id from current_relation_members a, new_relation_fathers b where "+\
+		raw = dbh.executeAndFetchAll("select a.relation_id, a.member_type, a.member_id, a.member_role, a.sequence_id from current_relation_members a, new_relation_fathers_"+self.Timestamp+" b where "+\
 			"a.member_type='Relation' and a.member_id=b.relation_id and a.relation_id=b.father_id" );
 		for tp in raw:
 			self.Relations[tp[0]].addMembers(tp[4],tp[1],tp[2],tp[3]);
@@ -289,9 +287,20 @@ class OsmGenerator:
 
 	def commit(self):
 		self.f.close();
+		dbh = DBHelper();
+		dbh.batchExecute(["drop view new_nodes_"+self.Timestamp,\
+			"drop table new_relation_fathers_"+self.Timestamp,\
+			"drop view new_relation_members_"+self.Timestamp,\
+			"drop view new_way_nodes_"+self.Timestamp]);
 
 
 if __name__ == '__main__':
+	gen = OsmGenerator('a.osm',minLat=30.0040639, maxLat=30.9263716, minLon=118.6901586, maxLon=120.7920180)
+	gen.process();
+	gen.commit();
+	gen = OsmGenerator('a.osm',minLat=30.0040639, maxLat=30.9263716, minLon=118.6901586, maxLon=120.7920180)
+	gen.process();
+	gen.commit();
 	gen = OsmGenerator('a.osm',minLat=30.0040639, maxLat=30.9263716, minLon=118.6901586, maxLon=120.7920180)
 	gen.process();
 	gen.commit();

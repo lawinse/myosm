@@ -159,7 +159,7 @@ class Queries:
 		solve = OtherUtils.GetCirclePointSolver();
 
 		dbh = DBHelper();
-		raw = dbh.executeAndFetchAll("select id, latitude, longitude from current_nodes where id in (select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"')");
+		raw = dbh.executeAndFetchAll("select id, latitude, longitude from current_nodes where id in (select distinct node_id from current_node_tags where k='poitype' and v='"+poitype+"') order by latitude,longitude");
 		x = [tp[1]/DistanceUtils.coord_scale for tp in raw];
 		y = [tp[2]/DistanceUtils.coord_scale for tp in raw];
 		num_numbers = len(x)
@@ -203,8 +203,9 @@ class Queries:
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	print myQuery.query_poi_node_name_nearby([31.1981978,121.4152321],"联通营业厅".decode('utf8'))
-	# print myQuery.query_most_poi_within_radius("大型购物".decode('utf8'),2000)
+	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"东北".decode('utf8'))
+	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"地铁站".decode('utf8'))
+	print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
 	# print myQuery.query_most_poi_within_radius("金融".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
 	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)
