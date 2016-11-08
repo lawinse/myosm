@@ -152,7 +152,7 @@ class Queries:
 			params = (coord[1],coord[0],coord[1],coord[0],poi1,poi2,num,) if order_sensitive == False else (coord[1],coord[0],poi1,poi2,num)) 
 		data = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]), tp[6])for tp in raw]
 		return data
-	def query_most_poi_within_radius(self, poitype,radius):
+	def query_most_poi_within_radius(self, poitype,radius,need_precise = False):
 		import ctypes
 		poitype = OtherUtils.StdlizePOIType(poitype)
 
@@ -160,13 +160,13 @@ class Queries:
 
 		dbh = DBHelper();
 		raw = dbh.executeAndFetchAll("select id, latitude, longitude from current_nodes where id in "+\
-			"(select distinct node_id from current_node_tags where k='poitype' and v=%s) order by latitude,longitude",params=(poitype,));
+			"(select distinct node_id from current_node_tags where k='poitype' and v=%s)",params=(poitype,));
 		x = [tp[1]/DistanceUtils.coord_scale for tp in raw];
 		y = [tp[2]/DistanceUtils.coord_scale for tp in raw];
 		num_numbers = len(x)
 		array_type = ctypes.c_double * num_numbers
 		print ">>>>> Searching ..."
-		res = solve(radius,num_numbers,array_type(*x),array_type(*y))
+		res = solve(radius,num_numbers,array_type(*x),array_type(*y),need_precise)
 		count = int(res[0])
 		return ([res[1]*DistanceUtils.coord_scale,res[2]*DistanceUtils.coord_scale],count)
 
@@ -202,9 +202,9 @@ class Queries:
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
+	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
 	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"地铁站".decode('utf8'))
-	# print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
+	print myQuery.query_most_poi_within_radius("住宅区".decode('utf8'),2000)
 	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
 	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)

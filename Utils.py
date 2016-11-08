@@ -87,7 +87,7 @@ class DistanceUtils:
 		l2 = DistanceUtils.spherical_distance(top,right);
 		bottom = DistanceUtils.spherical_distance(left,right);
 		p = 0.5*(l1+l2+bottom);
-		return math.sqrt(max(p*(p-l1)*(p-l2)*(p-bottom),0))/bottom
+		return 2*math.sqrt(max(p*(p-l1)*(p-l2)*(p-bottom),0))/bottom   # Heron Formula
 
 	def node2Line(self, node_coord, line_coords): #line_coords must be sequatially
 		def isAcute(vtr1,vtr2):
@@ -101,6 +101,7 @@ class DistanceUtils:
 				return isAcute(v1,v2);
 			else:
 				return False;
+				
 		for i in range(len(line_coords)-1):
 			if (isMiddle(node_coord,line_coords[i],line_coords[i+1])):
 				return self.getHeight(node_coord,line_coords[i],line_coords[i+1]);
@@ -328,7 +329,7 @@ class OtherUtils:
 			dll = ctypes.cdll.LoadLibrary(WORK_DIR+'circle_point.so')
 			solve = dll.solve
 			solve.restype = ctypes.POINTER(ctypes.c_double)
-			solve.argtypes = [ctypes.c_double,ctypes.c_int,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double)]
+			solve.argtypes = [ctypes.c_double,ctypes.c_int,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double),ctypes.c_bool]
 			OtherUtils.Circle_Point_Solver = solve;
 		return OtherUtils.Circle_Point_Solver;
 def test_node2Line():
@@ -341,8 +342,8 @@ if __name__ == '__main__':
 	# WayNameUtils.Build();
 	# print OtherUtils.StdlizePOIType("高校".decode('utf8'))
 	# DistanceUtils.Build()
-	frompoint = [312657494.0, 1215623103.0]
-	topoint = [312725911.8431407, 1215178677.4843748]
+	frompoint = [312276266.02334875, 1214640574.0293458]
+	topoint = [312280285.6837818, 1214582666.5876756]
 	print DistanceUtils.spherical_distance(frompoint,topoint)
 	# nu = NodeNameUtils();
 	# print NodeNameUtils.Name2id["中国浦发".decode("utf8")]

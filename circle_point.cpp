@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
+#include <ctime>
 using namespace std;
 #define PI 3.14159265358979323846
 #define R 6370996.81
@@ -44,8 +46,27 @@ inline double dist(double x1, double y1, double x2, double y2) {
     // x2 = lw(x2,-74,74);
     return Td(oi(y1),oi(y2),oi(x1),oi(x2));
 }
+
+int sample(int &num, double *px, double *py, int rough_base=10000) {
+	if (num<rough_base*1.5) return 1;
+	srand(time(0));
+	int thed = int(round(num*1.0/rough_base));
+	int cnt = 0;
+	for (int i=0; i<num; ++i) {
+		if (rand()%thed == 0){
+			px[cnt] = px[i];
+			py[cnt++] = py[i];
+		}
+	}
+	printf(">>>>> Random downsampling from %d to %d\n",num,cnt );
+	num = cnt;
+	return thed;
+}
+
 extern "C"{
-	double* solve(double r, int n, double *px, double *py){
+	double* solve(double r, int num, double *px, double *py, bool precise){
+		int n = num, thed = 1;
+		if (!precise) thed = sample(n,px,py);
 		Point * p = new Point[2*n+10];
 		double *ret = new double[3];
 		ret[0] = ret[1] = ret[2] = -1;
@@ -72,7 +93,7 @@ extern "C"{
 			}
 		}
 		if (ans_id != -1) {
-			ret[0] = ans;
+			ret[0] = ans*thed;
 			ret[1] = ans_x;
 			ret[2] = ans_y;
 		}
