@@ -73,6 +73,10 @@ class ChangeSetUtils(handler.ContentHandler):
 			return False;
 
 	def startElement(self, name, attrs):
+		def fmttime(s):
+			if s.lower() == 'now': return self.timestamp;
+			else: return  datetime.datetime.strptime(s,"%Y-%m-%dT%H:%M:%SZ");
+
 		if name == "changeset":
 			self.operationType = attrs.get('operation',"");
 			assert self.operationType in ("rollback","commit") , "Wrong Type operation"
@@ -115,13 +119,26 @@ class ChangeSetUtils(handler.ContentHandler):
 		# rollback
 		else:
 			if name == 'target':
-				self.changesetIdList.append(int(attrs.get('id')));
+				if len(attrs.get('id',""))>0:
+					self.changesetIdList.append(int(attrs.get('id')));
+					self._from = None;
+					self._to = None;
+				elif len(attrs.get('created_at_from',""))>0 and len(attrs.get('created_at_to',""))>0:
+					self._from = fmttime(attrs.get('created_at_from',""))
+					self._to = fmttime(attrs.get('created_at_to',""))
+
 
 	def endElement(self, name):
-		if self.operationType == 'rollback': return;
-		if name in ("node","way"):
-			self.currentObjectName = None;
-			self.currentObjectId = None;
+		if self.operationType == 'rollback':
+			if (self._from != None and self._to != None) :
+				dbh = DBHelper();
+				raw = dbh.executeAndFetchAll("select id from changesets where created_at>=%s and created_at<=%s",\
+					params = (datetime.datetime.strftime(self._from,"%Y-%m-%d %H:%M:%S"),datetime.datetime.strftime(self._to,"%Y-%m-%d %H:%M:%S")))
+				self.changesetIdList += [tp[0] for tp in raw]
+		else:
+			if name in ("node","way"):
+				self.currentObjectName = None;
+				self.currentObjectId = None;
 
 	def dumpDB(self):
 		print ">>>>> Dumping into DB ..."
@@ -226,7 +243,7 @@ class ChangeSetUtils(handler.ContentHandler):
 
 
 if __name__ == '__main__':
-	ChangeSetUtils(WORK_DIR+"addOSM.xml");
+	# ChangeSetUtils(WORK_DIR+"addOSM.xml");
 	ChangeSetUtils(WORK_DIR+"rollbackOSM.xml");
 
 		
