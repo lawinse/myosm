@@ -204,7 +204,7 @@ if __name__ == '__main__':
 	myQuery = Queries();
 	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
 	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"地铁站".decode('utf8'))
-	print myQuery.query_most_poi_within_radius("住宅区".decode('utf8'),2000)
+	print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
 	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
 	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)

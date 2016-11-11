@@ -3,9 +3,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <thread>
+#include <cstring>
 using namespace std;
 #define PI 3.14159265358979323846
 #define R 6370996.81
+#define ROUGH_BASE 10000
 
 struct Point{
 	int id;
@@ -47,10 +50,10 @@ inline double dist(double x1, double y1, double x2, double y2) {
     return Td(oi(y1),oi(y2),oi(x1),oi(x2));
 }
 
-int sample(int &num, double *px, double *py, int rough_base=10000) {
-	if (num<rough_base*1.5) return 1;
+int sample(int &num, double *px, double *py) {
+	if (num<ROUGH_BASE*1.5) return 1;
 	srand(time(0));
-	int thed = int(round(num*1.0/rough_base));
+	int thed = int(round(num*1.0/ROUGH_BASE));
 	int cnt = 0;
 	for (int i=0; i<num; ++i) {
 		if (rand()%thed == 0){
@@ -63,12 +66,11 @@ int sample(int &num, double *px, double *py, int rough_base=10000) {
 	return thed;
 }
 
-extern "C"{
-	double* solve(double r, int num, double *px, double *py, bool precise){
+void _solve(double r, int num, double *px, double *py,double *ret,bool precise){
 		int n = num, thed = 1;
 		if (!precise) thed = sample(n,px,py);
 		Point * p = new Point[2*n+10];
-		double *ret = new double[3];
+		// double *ret = new double[3];
 		ret[0] = ret[1] = ret[2] = -1;
 		int ans = 1, ans_id = -1;
 		double ans_x = -1,ans_y = -1;
@@ -98,6 +100,43 @@ extern "C"{
 			ret[2] = ans_y;
 		}
 		delete []p;
+		return;
+	}
+
+extern "C"{
+	double* solve(double r, int num, double *px, double *py, bool precise){
+		double *ret = new double[3];
+		if (num > ROUGH_BASE*1.5 && !precise) {
+			const int REPEAT = 4;
+			printf(">>>>> %d works concurrently ...\n",REPEAT);
+			thread t[REPEAT];
+			double ** Px = new double *[REPEAT];
+			double ** Py = new double *[REPEAT];
+			double Ret[REPEAT][3];
+			for (int i=0; i<REPEAT; ++i) {
+				Px[i] = new double [num];
+				Py[i] = new double [num];
+				memcpy(Px[i],px,sizeof(double)*num);
+				memcpy(Py[i],py,sizeof(double)*num);
+				t[i] = thread(_solve,r,num,Px[i],Py[i],Ret[i],precise);
+			}
+			for (int i=0; i<REPEAT; ++i){
+				t[i].join();
+			}
+
+			ret[0] = ret[1] = ret[2] = 0;
+			for (int i=0; i<REPEAT; ++i) {
+				ret[0] += Ret[i][0];
+				ret[1] += Ret[i][1];
+				ret[2] += Ret[i][2];
+			}
+			ret[0] /= REPEAT;
+			ret[1] /= REPEAT;
+			ret[2] /= REPEAT;
+		} else {
+			_solve(r,num,px,py,ret,precise);
+		}
+
 		return ret;
 	}
 
