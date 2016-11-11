@@ -37,6 +37,13 @@ class DBHelper:
 		else:
 			data = self.cursor.fetchmany(num);
 		return data;
+	def commit(self):
+		try:
+			DBHelper.DBC.commit();
+		except:
+			DBHelper.DBC.rollback();
+			DBHelper.PrintLog();
+			DBHelper.DumpLog();
 	def execute(self, sql, params=None, need_commit=False):
 		DBHelper.LOGGER.append(sql+(("  params:"+str(params)) if params != None else ""));
 		if need_commit:
@@ -90,8 +97,9 @@ class DBHelper:
 
 if __name__ == '__main__':
 	dbh = DBHelper();
-	for i in range(100):
-		dbh.executeAndFetchAll("select * from current_nodes where id=%s",params=(26609107+i,));
+	print len(dbh.executeAndFetchAll("select * from current_nodes where id=-1"))
+	# for i in range(100):
+	# 	dbh.executeAndFetchAll("select * from current_nodes where id=%s",params=(26609107+i,));
 	# poi1 = '酒店'.decode('utf8')
 	# poi2 = '加油加气站'.decode('utf8')
 	# num=5

@@ -16,14 +16,14 @@ class BM_25:
 	BM_MDL_WAY = None;
 	# MDL: [N,DocAvglen,Doc2DocTF_id,DocTF,DocIDF,Dic]
 	@classmethod
-	def Build(cls, typ):
-		if typ == 'Node' and BM_25.BM_MDL_ND != None: return
-		if typ == 'Way' and BM_25.BM_MDL_WAY != None: return 
-		if not os.path.exists(WORK_DIR+"data/BM_25_"+typ+".mdl"):
+	def Build(cls, typ, rebuild=False):
+		if typ == 'Node' and BM_25.BM_MDL_ND != None and not rebuild: return
+		if typ == 'Way' and BM_25.BM_MDL_WAY != None and not rebuild: return 
+		if not os.path.exists(WORK_DIR+"data/BM_25_"+typ+".mdl") or rebuild:
 			from Utils import NodeNameUtils, WayNameUtils
 			print ">>>>> Building BM_25 Model ..."
 			dbh = DBHelper();
-			raw = dbh.executeAndFetchAll("select distinct v from current_"+typ.lower()+"_tags where k='name'");
+			raw = dbh.executeAndFetchAll("select distinct v from current_"+typ.lower()+"_tags where k='name' or k='name:zh'");
 			nameSet = set([NodeNameUtils.cleanName(tp[0]) for tp in raw]);
 			Dic = corpora.Dictionary();
 			rawdata = []

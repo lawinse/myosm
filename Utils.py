@@ -39,8 +39,8 @@ class DistanceUtils:
 		return result
 
 	@classmethod
-	def Build(cls):
-		if DistanceUtils.kd_tuple != None: return;
+	def Build(cls, rebuild=False):
+		if DistanceUtils.kd_tuple != None and not rebuild: return;
 		print ">>>>> Initalize DistanceUtils ..."
 		dbh = DBHelper();
 		all_nodes = dbh.executeAndFetchAll("select id,latitude,longitude from current_nodes where visible = 1")
@@ -123,11 +123,11 @@ class NodeNameUtils:  # align to utf8
 		return name
 
 	@classmethod
-	def Build(cls):
-		if len(NodeNameUtils.Name2id) != 0 and NodeNameUtils.BKT != None: return;
+	def Build(cls, rebuild=False):
+		if len(NodeNameUtils.Name2id) != 0 and NodeNameUtils.BKT != None and not rebuild: return;
 		print ">>>>> Initalize NodeNameUtils ..."
 
-		if (os.path.exists(WORK_DIR+"data/Name2id.dat")):
+		if (os.path.exists(WORK_DIR+"data/Name2id.dat")) and not rebuild:
 			print ">>>>> Loading ..."
 			NodeNameUtils.Name2id = joblib.load(WORK_DIR+"data/Name2id.dat")
 		else:
@@ -142,7 +142,7 @@ class NodeNameUtils:  # align to utf8
 					NodeNameUtils.Name2id[cname] = [pair[0]];
 			joblib.dump(NodeNameUtils.Name2id,WORK_DIR+"data/Name2id.dat",compress=3)
 		
-		if (os.path.exists(WORK_DIR+"data/BKT.dat")):
+		if (os.path.exists(WORK_DIR+"data/BKT.dat")) and not rebuild:
 			print ">>>>> Load BKTree ..."
 			NodeNameUtils.BKT = joblib.load(WORK_DIR+"data/BKT.dat")
 		else:
@@ -208,11 +208,11 @@ class WayNameUtils:  # align to utf8
 		return name
 
 	@classmethod
-	def Build(cls):
-		if len(WayNameUtils.Name2id_way) != 0 and WayNameUtils.BKTree_way != None: return;
+	def Build(cls, rebuild=False):
+		if len(WayNameUtils.Name2id_way) != 0 and WayNameUtils.BKTree_way != None and not rebuild: return;
 		print ">>>>> Initalize WayNameUtils ..."
 
-		if (os.path.exists(WORK_DIR+"data/Name2id_way.dat")):
+		if (os.path.exists(WORK_DIR+"data/Name2id_way.dat")) and not rebuild:
 			print ">>>>> Loading ..."
 			WayNameUtils.Name2id_way = joblib.load(WORK_DIR+"data/Name2id_way.dat")
 		else:
@@ -227,7 +227,7 @@ class WayNameUtils:  # align to utf8
 					WayNameUtils.Name2id_way[cname] = [pair[0]];
 			joblib.dump(WayNameUtils.Name2id_way,WORK_DIR+"data/Name2id_way.dat",compress=3)
 		
-		if (os.path.exists(WORK_DIR+"data/BKTree_way.dat")):
+		if (os.path.exists(WORK_DIR+"data/BKTree_way.dat")) and not rebuild:
 			print ">>>>> Load BKTree ..."
 			WayNameUtils.BKTree_way = joblib.load(WORK_DIR+"data/BKTree_way.dat")
 		else:
@@ -268,32 +268,25 @@ class OtherUtils:
 	Poi_Mapping = None
 	Circle_Point_Solver = None;
 	@staticmethod
-	def Build():
+	def Build(rebuild=False):
 		print ">>>>> Initalize OtherUtils ..."
-		OtherUtils.GetRelationFather();
-		OtherUtils.GetNid2Coord();
-		OtherUtils.GetCirclePointSolver();
-		OtherUtils.StdlizePOIType();
+		OtherUtils.GetRelationFather(rebuild);
+		OtherUtils.GetNid2Coord(rebuild);
+		OtherUtils.GetCirclePointSolver(rebuild);
+		OtherUtils.StdlizePOIType("",rebuild);
 		print ">>>>> Done Initalization"
 	@staticmethod
-	def GetNid2Coord():
-		if OtherUtils.Nid_Coord == None:
-			ret = {}
-			if os.path.exists(WORK_DIR+"data/Nid_Coord.dat"):
-				print ">>>>> Loading Nid_Coord ..."
-				ret = joblib.load(WORK_DIR+"data/Nid_Coord.dat");
-			else:
-				dbh = DBHelper();
-				raw = dbh.executeAndFetchAll("select id, latitude, longitude from current_nodes where visible=1")
-				x = [tp[0] for tp in raw];
-				y = [[tp[1],tp[2]] for tp in raw];
-				ret = dict(zip(x,y))
-				joblib.dump(ret,WORK_DIR+"data/Nid_Coord.dat",compress=3)
-			OtherUtils.Nid_Coord = ret;
+	def GetNid2Coord(rebuild=False):
+		if OtherUtils.Nid_Coord == None or rebuild:
+			dbh = DBHelper();
+			raw = dbh.executeAndFetchAll("select id, latitude, longitude from current_nodes where visible=1")
+			x = [tp[0] for tp in raw];
+			y = [[tp[1],tp[2]] for tp in raw];
+			OtherUtils.Nid_Coord = dict(zip(x,y))
 		return OtherUtils.Nid_Coord;
 	@staticmethod
-	def StdlizePOIType(poitype):
-		if OtherUtils.Poi_Mapping == None:
+	def StdlizePOIType(poitype,rebuild=False):
+		if OtherUtils.Poi_Mapping == None or rebuild:
 			OtherUtils.Poi_Mapping = {}
 			with open(WORK_DIR+'poitype.map','r+') as f1:
 				for lines in f1.readlines():
@@ -303,8 +296,8 @@ class OtherUtils:
 			return OtherUtils.Poi_Mapping[poitype];
 		return None
 	@staticmethod
-	def GetRelationFather():
-		if OtherUtils.Relation_Father == None:
+	def GetRelationFather(rebuild=False):
+		if OtherUtils.Relation_Father == None or rebuild:
 			ret = {}
 			if os.path.exists(WORK_DIR+"data/Relation_Father.dat"):
 				print ">>>>> Loading Relation_Father ..."
@@ -321,8 +314,8 @@ class OtherUtils:
 			OtherUtils.Relation_Father = ret;
 		return OtherUtils.Relation_Father;
 	@staticmethod
-	def GetCirclePointSolver():
-		if OtherUtils.Circle_Point_Solver == None:
+	def GetCirclePointSolver(rebuild=False):
+		if OtherUtils.Circle_Point_Solver == None or rebuild:
 			import ctypes
 			# if not os.path.exists(WORK_DIR+"circle_point.so"):
 			os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+WORK_DIR+"circle_point.cpp -o "+WORK_DIR+"circle_point.so")
@@ -337,13 +330,15 @@ def test_node2Line():
 	ds.node2Line()
 
 
+
+
 if __name__ == '__main__':
 	# NodeNameUtils.Build();
 	# WayNameUtils.Build();
 	# print OtherUtils.StdlizePOIType("高校".decode('utf8'))
 	# DistanceUtils.Build()
-	frompoint = [312276266.02334875, 1214640574.0293458]
-	topoint = [312280285.6837818, 1214582666.5876756]
+	frompoint = [312269073, 1215310363]
+	topoint = [312268644, 1215310825]
 	print DistanceUtils.spherical_distance(frompoint,topoint)
 	# nu = NodeNameUtils();
 	# print NodeNameUtils.Name2id["中国浦发".decode("utf8")]
@@ -365,7 +360,7 @@ if __name__ == '__main__':
 	# 	retli = wnu.findSim(target.decode('utf8'))
 	# 	for ret in retli:
 	# 		print ret[0],ret[1],ret[2]
-	# ds = DistanceUtils();
-	# print ds.queryNN(pointlist = np.array([[312268644,1215310826]]), k_nn=8);
+	ds = DistanceUtils();
+	print ds.queryNN(pointlist = np.array([[312268644,1215310826]]), k_nn=8);
 	# ds2 = DistanceUtils();
 	# print ds2.queryNN(pointlist = np.array([[312268644,1215310826],[0,1]]), k_nn=3);

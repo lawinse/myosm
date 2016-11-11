@@ -11,6 +11,7 @@ import numpy as np
 
 def getWeight(transport, wayType):
 	Weightings = { \
+	'arbitrarygate': {'car':sys.maxint, 'bike':sys.maxint, 'walk':sys.maxint},
 	'motorway': {'car':10},
 	'trunk':    {'car':10, 'bike':0.05},
 	'primary':  {'bike': 0.3, 'car':2, 'walk':1},
@@ -101,9 +102,9 @@ class Routing:
 			Routing.Route[rt][fr] = {to: w}
 
 	@classmethod
-	def Build(cls):
-		if len(Routing.Route) > 0:  return;
-		if os.path.exists(WORK_DIR+"data/route.dat"):
+	def Build(cls, rebuild=False):
+		if len(Routing.Route) > 0 and not rebuild:  return;
+		if os.path.exists(WORK_DIR+"data/route.dat") and not rebuild:
 			print ">>>>> Loading Routing dat ..."
 			Routing.Route,Routing.CanRouteFrom = joblib.load(WORK_DIR+"data/route.dat")
 		else:
@@ -142,8 +143,8 @@ class Routing:
 				reversible = (oneway != 'yes')
 
 				canGo = {}
-				canGo['bike'] = highway in ('primary','secondary','tertiary','unclassified','minor','cycleway','residential', 'track','service')
-				canGo['car'] = highway in ('motorway','trunk','primary','secondary','tertiary','unclassified','minor','residential', 'service')
+				canGo['bike'] = highway in ('arbitrarygate','primary','secondary','tertiary','unclassified','minor','cycleway','residential', 'track','service')
+				canGo['car'] = highway in ('arbitrarygate','motorway','trunk','primary','secondary','tertiary','unclassified','minor','residential', 'service')
 				canGo['walk'] = canGo['bike'] or highway in('footway','steps')
 
 				last = -1

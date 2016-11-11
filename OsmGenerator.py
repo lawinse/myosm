@@ -75,6 +75,15 @@ class Way:
 	def addNodes(self,sq_id,nd_id):
 		self.nds[sq_id] = nd_id;
 
+	def appendNodes(self,nd_id):
+		self.nds[self.getNextNodesSeqId()] = nd_id;
+
+	def getNextNodesSeqId(self):
+		if len(self.nds) == 0:
+			return 1;
+		else:
+			return max(self.nds.keys())+1;
+
 	def translate(self):
 		header = 'id='+bracketen(self.id)+\
 					' visible='+bracketen(str(self.visible==1).lower())+\
