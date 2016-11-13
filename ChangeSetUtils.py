@@ -12,8 +12,20 @@ import datetime
 
 class ChangeSetUtils(handler.ContentHandler):
 
+	def build(self):
+		dbh = DBHelper();
+		dbh.execute(sql="create table if not exists changesets_dependence( "+\
+		 "id bigint(20) NOT NULL,"+\
+		 "dep_id bigint(20),"+\
+		 "primary key (id),"
+		 "foreign key(dep_id) references changesets(id))",need_commit=True)
+		dbh.execute(sql="insert into changesets_dependence select -1, -1 from dual where not exists(select id from changesets_dependence where id = -1)")
+		dbh.execute(sql="insert into changesets_dependence select 1, 1 from dual where not exists(select id from changesets_dependence where id = 1)")
+		dbh.commit();
+
+
 	def __init__(self,filename):
-		
+		self.build();
 		self.operationType = None;
 		self.isRoutingChange = False;
 		self.isWayNameChange = False;
@@ -34,26 +46,45 @@ class ChangeSetUtils(handler.ContentHandler):
 		if (filename == None): return;
 		self.process(filename);
 
+	def __del__(self):
+		self.operationType = None;
+		self.isRoutingChange = False;
+		self.isWayNameChange = False;
+		self.isNodeNameChange = False;
+		self.isNodePosChange = False;
+		self.currentObjectName = None;
+		self.currentObjectId = None;
+		self.nodes = None;
+		self.ways = None;
+		self.tags = None;
+		self.node_id_mapping = None;
+		self.way_id_mapping = None;
+		self.timestamp = None;
+		self.numOfChanges = 0;
+		self.changesetId = None;
+		self.changesetIdList = None;
+		gc.collect();
+
 
 	def process(self,filename):
 		isSuccess = self.parseXML(filename);
 		if not isSuccess:
 			return;
 
-		if self.operationType == 'commit':
-			self.dumpDB()
-		elif self.operationType == 'rollback':
-			self.reverseDB();
+		try:
+			if self.operationType == 'commit':
+				self.dumpDB()
+			elif self.operationType == 'rollback':
+				self.reverseDB();
+		except Exception,e:
+			print "[Error]", e;
+			print ">>>>> Operation Failed, please check the log"
 		self.rebuildData();
 
 	def calcChangeSetId(self):
 		dbh = DBHelper();
-		raw = [dbh.executeAndFetchAll("select distinct changeset_id from current_nodes"),\
-			dbh.executeAndFetchAll("select distinct changeset_id from current_ways"),\
-			dbh.executeAndFetchAll("select distinct changeset_id from current_relations"),]
-		idset = set();
-		for item in raw:
-			idset = idset | set([int(tp[0]) for tp in item]);
+		raw = dbh.executeAndFetchAll("select id from changesets");
+		idset = set([tp[0] for tp in raw]);
 		return abs(max(idset))+1;
 
 	def getChangeSetId(self):
@@ -78,6 +109,8 @@ class ChangeSetUtils(handler.ContentHandler):
 			else: return  datetime.datetime.strptime(s,"%Y-%m-%dT%H:%M:%SZ");
 
 		if name == "changeset":
+			if self.operationType != None:
+				assert(False), "One operation per time!"
 			self.operationType = attrs.get('operation',"");
 			assert self.operationType in ("rollback","commit") , "Wrong Type operation"
 
@@ -154,6 +187,9 @@ class ChangeSetUtils(handler.ContentHandler):
 			tp = ds.queryNN(pointlist = np.array([[lat,lon]]))[0][0];
 			if (ds.spherical_distance([lat,lon],[tp[1],tp[2]]) < 5):   # regarded as the same if two points are within distance of 5m
 				self.node_id_mapping[nd] = tp[0]
+				dep_id = dbh.executeAndFetchAll("select changeset_id from current_nodes where id=%s",params=(tp[0],))[0][0]
+				dbh.execute(sql="insert into changesets_dependence select %s,%s from dual where not exists(select id from changesets_dependence where id = %s)",\
+					params=(self.getChangeSetId(),dep_id,self.getChangeSetId()), need_commit=True);
 			else:
 				self.isNodePosChange = True;
 				node_id_base += 1;
@@ -185,6 +221,35 @@ class ChangeSetUtils(handler.ContentHandler):
 
 
 	def reverseDB(self):
+		assert(-1 not in self.changesetIdList and 1 not in self.changesetIdList), "Original changeset can not be reversed!"
+
+		# changeset_id check
+
+		dbh = DBHelper();
+		raw = dbh.executeAndFetchAll("select * from changesets_dependence");
+		dep_dic = {};
+		for csid,dep_id in zip([tp[0] for tp in raw],[tp[1] for tp in raw]):
+			if (dep_dic.has_key(dep_id)): 
+				dep_dic[dep_id].append(csid);
+			else:
+				dep_dic[dep_id] = [csid];
+		raw = dbh.executeAndFetchAll("select id,created_at from changesets");
+		id_create_dic = dict(zip([tp[0] for tp in raw], [tp[1] for tp in raw]));
+		idset = set([tp[0] for tp in raw]);
+
+		self.changesetIdList = list(set(self.changesetIdList))
+
+		for csid in self.changesetIdList:
+			if not (csid in idset): 
+				print "Warning: No such changeset_id %d!" % (csid);
+				self.changesetIdList.remove(csid)
+			if (dep_dic.has_key(csid)):
+				for item in dep_dic[csid]:
+					assert (item in self.changesetIdList), "can not roll back changeset %d without rolling back changeset %d" % (csid, item);
+		self.changesetIdList.sort(key=lambda d:id_create_dic[d], reverse=True);
+
+
+
 		print ">>>>> Reversing from DB ..."
 		dbh = DBHelper()
 		node_id = [];
@@ -219,6 +284,7 @@ class ChangeSetUtils(handler.ContentHandler):
 		dbh.commit();
 
 		for cs in self.changesetIdList:
+			dbh.execute("delete from changesets_dependence where id=%s",params=(cs,))
 			dbh.execute("delete from changesets where id=%s",params=(cs,));
 		dbh.commit();
 
@@ -244,6 +310,7 @@ class ChangeSetUtils(handler.ContentHandler):
 
 if __name__ == '__main__':
 	# ChangeSetUtils(WORK_DIR+"addOSM.xml");
+	# ChangeSetUtils(WORK_DIR+"addOSM2.xml")
 	ChangeSetUtils(WORK_DIR+"rollbackOSM.xml");
 
 		

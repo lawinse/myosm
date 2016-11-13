@@ -24,6 +24,7 @@ class DBHelper:
 		except:
 			DBHelper.Build()
 			self.cursor = DBHelper.DBC.cursor();
+		self.name = 'dbh(' + str(hash(datetime.datetime.now()))+")"
 	def __del__(self):
 		self.cursor.close();
 	def executeAndFetchAll(self, sql, params=None):
@@ -45,7 +46,7 @@ class DBHelper:
 			DBHelper.PrintLog();
 			DBHelper.DumpLog();
 	def execute(self, sql, params=None, need_commit=False):
-		DBHelper.LOGGER.append(sql+(("  params:"+str(params)) if params != None else ""));
+		DBHelper.LOGGER.append(self.name+' --> '+sql+(("  params:"+str(params)) if params != None else ""));
 		if need_commit:
 			try:
 				self.cursor.execute(sql) if params == None else self.cursor.execute(sql,params);
@@ -82,13 +83,16 @@ class DBHelper:
 		print "#########\n"
 	@classmethod
 	def DumpLog(cls):
+		if datetime.datetime.now() - datetime.datetime.strptime(cls.START_AT,"%Y%m%d%H%M%S") > datetime.timedelta(hours=1):
+			cls.START_AT = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+			
 		if not os.path.exists(WORK_DIR+"log"): os.mkdir(WORK_DIR+"log")
 		mode = 'w+' if not os.path.exists(WORK_DIR+"log/sqlquery"+cls.START_AT+".log") else "a";
 		f = open(WORK_DIR+"log/sqlquery"+cls.START_AT+".log",mode);
 		l = len(cls.LOGGER);
 		if l > 10: l-=10;
 		for line in cls.LOGGER[:l]:
-			f.write('>  '+line+'\n');
+			f.write(line+'\n');
 		f.close()
 		cls.LOGGER = cls.LOGGER[l:]
 		
@@ -98,6 +102,7 @@ class DBHelper:
 if __name__ == '__main__':
 	dbh = DBHelper();
 	print len(dbh.executeAndFetchAll("select * from current_nodes where id=-1"))
+	dbh.commit();
 	# for i in range(100):
 	# 	dbh.executeAndFetchAll("select * from current_nodes where id=%s",params=(26609107+i,));
 	# poi1 = '酒店'.decode('utf8')
