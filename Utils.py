@@ -146,8 +146,13 @@ class NodeNameUtils:  # align to utf8
 			print ">>>>> Load BKTree ..."
 			NodeNameUtils.BKT = joblib.load(WORK_DIR+"data/BKT.dat")
 		else:
-			print ">>>>> Build BKTree ..."
-			NodeNameUtils.BKT = BKTree(words=NodeNameUtils.Name2id.keys())
+			if rebuild:
+				if NodeNameUtils.BKT == None: NodeNameUtils.BKT = joblib.load(WORK_DIR+"data/BKT.dat")
+				print ">>>>> Rebuild BKTree ..."
+				NodeNameUtils.BKT.alter(new_words=NodeNameUtils.Name2id.keys());
+			else:
+				print ">>>>> Build BKTree ..."
+				NodeNameUtils.BKT = BKTree(words=NodeNameUtils.Name2id.keys())
 			joblib.dump(NodeNameUtils.BKT,WORK_DIR+"data/BKT.dat",compress=3)
 		print ">>>>> Done Initalization"
 
@@ -231,8 +236,13 @@ class WayNameUtils:  # align to utf8
 			print ">>>>> Load BKTree ..."
 			WayNameUtils.BKTree_way = joblib.load(WORK_DIR+"data/BKTree_way.dat")
 		else:
-			print ">>>>> Build BKTree ..."
-			WayNameUtils.BKTree_way = BKTree(words=WayNameUtils.Name2id_way.keys())
+			if rebuild:
+				if WayNameUtils.BKTree_way == None: WayNameUtils.BKTree_way = joblib.load(WORK_DIR+"data/BKTree_way.dat")
+				print ">>>>> Rebuild BKTree ..."
+				WayNameUtils.BKTree_way.alter(new_words=WayNameUtils.Name2id_way.keys());
+			else:
+				print ">>>>> Build BKTree ..."
+				WayNameUtils.BKTree_way = BKTree(words=WayNameUtils.Name2id_way.keys())
 			joblib.dump(WayNameUtils.BKTree_way,WORK_DIR+"data/BKTree_way.dat",compress=3)
 		print ">>>>> Done Initalization"
 
@@ -337,10 +347,10 @@ if __name__ == '__main__':
 	# WayNameUtils.Build();
 	# print OtherUtils.StdlizePOIType("高校".decode('utf8'))
 	# DistanceUtils.Build()
-	frompoint = [312269073, 1215310363]
-	topoint = [312268644, 1215310825]
-	print DistanceUtils.spherical_distance(frompoint,topoint)
-	# nu = NodeNameUtils();
+	# frompoint = [312269073, 1215310363]
+	# topoint = [312268644, 1215310825]
+	# print DistanceUtils.spherical_distance(frompoint,topoint)
+	nu = NodeNameUtils();
 	# print NodeNameUtils.Name2id["中国浦发".decode("utf8")]
 	# retli = nu.getMostSim("中国民生银行".decode('utf8'))
 	# for ret in retli:
@@ -350,7 +360,7 @@ if __name__ == '__main__':
 	# 	retli = nu.getMostSim(target.decode('utf8'))
 	# 	for ret in retli:
 	# 		print ret[0],ret[1],ret[2]
-	# WayNameUtils.Build();
+	WayNameUtils.Build();
 	# wnu = WayNameUtils();
 	# retli = wnu.findSim("杨高中路".decode('utf8'))
 	# for ret in retli:
@@ -360,7 +370,7 @@ if __name__ == '__main__':
 	# 	retli = wnu.findSim(target.decode('utf8'))
 	# 	for ret in retli:
 	# 		print ret[0],ret[1],ret[2]
-	ds = DistanceUtils();
-	print ds.queryNN(pointlist = np.array([[312268644,1215310826]]), k_nn=8);
+	# ds = DistanceUtils();
+	# print ds.queryNN(pointlist = np.array([[312268644,1215310826]]), k_nn=8);
 	# ds2 = DistanceUtils();
 	# print ds2.queryNN(pointlist = np.array([[312268644,1215310826],[0,1]]), k_nn=3);

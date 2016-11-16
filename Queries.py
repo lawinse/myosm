@@ -10,6 +10,7 @@ class Queries:
 			NodeNameUtils.Build();
 			WayNameUtils.Build();
 			OtherUtils.Build();
+
 	def query1(self, node_id=None,coord=None,node_name=None):  # type(coord)=list 
 		tid = -1;
 		if node_id==None and coord==None and node_name == None:
@@ -196,6 +197,14 @@ class Queries:
 		coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
 		node_list = [(tp[0],tp[1],tp[2],DistanceUtils.spherical_distance(coord_int,tp[1])) for tp in node_list]
 		return sorted(node_list,key=lambda node:node[3])[:num]
+
+	def query_changesets(self, fiilenames=None):
+		from ChangeSetUtils import ChangeSetTask
+		task = ChangeSetTask();
+		for f in filenames:
+			task.push(f);
+		ret = task.execute();
+		return ret;
 
 
 

@@ -9,6 +9,7 @@ from OsmGenerator import Point, Way
 from Utils import DistanceUtils, NodeNameUtils, WayNameUtils, OtherUtils
 import numpy as np
 import datetime
+from collections import deque
 
 class ChangeSetUtils(handler.ContentHandler):
 
@@ -19,12 +20,12 @@ class ChangeSetUtils(handler.ContentHandler):
 		 "dep_id bigint(20),"+\
 		 "primary key (id),"
 		 "foreign key(dep_id) references changesets(id))",need_commit=True)
-		dbh.execute(sql="insert into changesets_dependence select -1, -1 from dual where not exists(select id from changesets_dependence where id = -1)")
-		dbh.execute(sql="insert into changesets_dependence select 1, 1 from dual where not exists(select id from changesets_dependence where id = 1)")
-		dbh.commit();
+		# dbh.execute(sql="insert into changesets_dependence select -1, -1 from dual where not exists(select id from changesets_dependence where id = -1)")
+		# dbh.execute(sql="insert into changesets_dependence select 1, 1 from dual where not exists(select id from changesets_dependence where id = 1)")
+		# dbh.commit();
 
 
-	def __init__(self,filename):
+	def __init__(self,filename, status=None):
 		self.build();
 		self.operationType = None;
 		self.isRoutingChange = False;
@@ -42,6 +43,7 @@ class ChangeSetUtils(handler.ContentHandler):
 		self.numOfChanges = 0;
 		self.changesetId = self.calcChangeSetId();
 		self.changesetIdList = [];  # for rollback
+		if (status != None): self.mergeChangeStatus(status);
 
 		if (filename == None): return;
 		self.process(filename);
@@ -65,6 +67,12 @@ class ChangeSetUtils(handler.ContentHandler):
 		self.changesetIdList = None;
 		gc.collect();
 
+	def getChangeStatus(self):
+		return (self.isRoutingChange,self.isWayNameChange,self.isNodeNameChange);
+	def mergeChangeStatus(self,status):
+		self.isRoutingChange |= status[0];
+		self.isWayNameChange |= status[1]
+		self.isNodeNameChange |= status[2]
 
 	def process(self,filename):
 		isSuccess = self.parseXML(filename);
@@ -79,7 +87,10 @@ class ChangeSetUtils(handler.ContentHandler):
 		except Exception,e:
 			print "[Error]", e;
 			print ">>>>> Operation Failed, please check the log"
-		self.rebuildData();
+
+		if self.isNodePosChange:		# change at once since it will be used soon afterward
+			DistanceUtils.Build(rebuild=True);
+			
 
 	def calcChangeSetId(self):
 		dbh = DBHelper();
@@ -130,7 +141,7 @@ class ChangeSetUtils(handler.ContentHandler):
 					self.currentObjectId = id;
 					self.nodes[id] = Point(id=id,lat=lat,lon=lon,changeset=self.changesetId,timestamp=self.timestamp);
 				else:
-					self.isRoutingChange = True;
+					self.isRoutingChange |= True;
 					self.currentObjectName = 'way';
 					id = int(attrs.get('id'))
 					self.currentObjectId = id;
@@ -142,10 +153,10 @@ class ChangeSetUtils(handler.ContentHandler):
 			elif name == 'tag':
 				k,v = (attrs.get('k'), attrs.get('v'))
 				if self.currentObjectName == 'node':
-					if 'name' in k: self.isNodeNameChange = True;
+					if 'name' in k: self.isNodeNameChange |= True;
 					self.nodes[self.currentObjectId].addTags(k,v)
 				elif self.currentObjectName == 'way':
-					if 'name' in k: self.isWayNameChange = True;
+					if 'name' in k: self.isWayNameChange |= True;
 					self.ways[self.currentObjectId].addTags(k,v)
 
 
@@ -181,7 +192,7 @@ class ChangeSetUtils(handler.ContentHandler):
 			need_commit=True)
 		ds = DistanceUtils();
 		# calc node id base
-		node_id_base = max(OtherUtils.GetNid2Coord().keys());
+		node_id_base = dbh.executeAndFetchAll('select max(id) from current_nodes')[0][0]
 		for nd in self.nodes.keys():
 			lat,lon = self.nodes[nd].lat,self.nodes[nd].lon;
 			tp = ds.queryNN(pointlist = np.array([[lat,lon]]))[0][0];
@@ -191,7 +202,7 @@ class ChangeSetUtils(handler.ContentHandler):
 				dbh.execute(sql="insert into changesets_dependence select %s,%s from dual where not exists(select id from changesets_dependence where id = %s)",\
 					params=(self.getChangeSetId(),dep_id,self.getChangeSetId()), need_commit=True);
 			else:
-				self.isNodePosChange = True;
+				self.isNodePosChange |= True;
 				node_id_base += 1;
 				self.node_id_mapping[nd] = node_id_base;
 				p = self.nodes[nd];
@@ -259,22 +270,22 @@ class ChangeSetUtils(handler.ContentHandler):
 			raw = dbh.executeAndFetchAll("select id from current_nodes where changeset_id=%s",params=(cs,));
 			node_id += [tp[0] for tp in raw];
 			if len(raw) > 0:
-				self.isNodePosChange = True;
+				self.isNodePosChange |= True;
 				# dbh.execute(sql="delete from current_nodes where changeset_id=%s",params=(cs,));
 
 			raw = dbh.executeAndFetchAll("select id from current_ways where changeset_id=%s",params=(cs,));
 			way_id += [tp[0] for tp in raw];
 			if len(raw) > 0:
-				self.isRoutingChange = True;
+				self.isRoutingChange |= True;
 				# dbh.execute(sql="delete from current_ways where changeset_id=%s",params=(cs,));
 		dbh.commit();
 		for nid in node_id:
 			raw = dbh.executeAndFetchAll("select distinct node_id from current_node_tags where k like %s and node_id=%s",params=("name%",nid));
-			if len(raw) > 0: self.isNodeNameChange=True;
+			if len(raw) > 0: self.isNodeNameChange|=True;
 			dbh.execute(sql="delete from current_node_tags where node_id=%s",params=(nid,));
 		for wid in way_id:
 			raw = dbh.executeAndFetchAll("select distinct way_id from current_way_tags where k like %s and way_id=%s",params=("name%",wid));
-			if len(raw) > 0: self.isWayNameChange=True;
+			if len(raw) > 0: self.isWayNameChange|=True;
 
 			dbh.execute(sql="delete from current_way_tags where way_id=%s",params=(wid,));
 			dbh.execute(sql="delete from current_way_nodes where id=%s",params=(wid,));
@@ -289,29 +300,52 @@ class ChangeSetUtils(handler.ContentHandler):
 		dbh.commit();
 
 
-	def rebuildData(self):
+	@classmethod
+	def rebuildData(cls,status):
 		print ">>>>> Rebuilding Data ... (May Take a loooooooong time)"
-		if self.isNodePosChange:
-			OtherUtils.GetNid2Coord(rebuild=True);
-			DistanceUtils.Build(rebuild=True);
-		if self.isRoutingChange:
+		OtherUtils.GetNid2Coord(rebuild=True);
+		isRoutingChange,isWayNameChange,isNodeNameChange = status;
+		if isRoutingChange:
 			from Routing import Routing;
 			Routing.Build(rebuild=True);
-		if self.isNodeNameChange:
-			from BM_25 import BM_25;
+		if isNodeNameChange:
+			# from BM_25 import BM_25;
 			NodeNameUtils.Build(rebuild=True);
-			BM_25.Build('Node',rebuild=True);
-		if self.isWayNameChange:
-			from BM_25 import BM_25;
+			# BM_25.Build('Node',rebuild=True);
+		if isWayNameChange:
+			# from BM_25 import BM_25;
 			WayNameUtils.Build(rebuild=True);
-			BM_25.Build('Way',rebuild=True);
+				# BM_25.Build('Way',rebuild=True);
+
+
+class ChangeSetTask:
+	def __init__(self):
+		self.queue = deque();
+	def push(self,filename):
+		self.queue.append(filename);
+	def execute(self):
+		commit_ids = []    # None means a rollback opeartion
+		if len(self.queue) <= 0:  return;
+		cstatus = None;
+		for tsk_filename in iter(self.queue):
+			cs = ChangeSetUtils(tsk_filename,cstatus);
+			cstatus = cs.getChangeStatus();
+			commit_ids.append(cs.getChangeSetId());
+		ChangeSetUtils.rebuildData(cstatus);
+		return commit_ids;
+
 
 
 
 if __name__ == '__main__':
 	# ChangeSetUtils(WORK_DIR+"addOSM.xml");
-	# ChangeSetUtils(WORK_DIR+"addOSM2.xml")
-	ChangeSetUtils(WORK_DIR+"rollbackOSM.xml");
+	# # ChangeSetUtils(WORK_DIR+"addOSM2.xml")
+	# ChangeSetUtils(WORK_DIR+"rollbackOSM.xml");
+	task = ChangeSetTask();
+	task.push(WORK_DIR+"addOSM.xml");
+	task.push(WORK_DIR+"addOSM2.xml");
+	task.push(WORK_DIR+"rollbackOSM.xml");
+	task.execute();
 
 		
 
