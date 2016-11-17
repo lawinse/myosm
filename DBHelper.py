@@ -24,7 +24,7 @@ class DBHelper:
 		except:
 			DBHelper.Build()
 			self.cursor = DBHelper.DBC.cursor();
-		self.name = 'dbh(' + str(hash(datetime.datetime.now()))+")"
+		self.name = 'dbh(' + str(hash(datetime.datetime.now()))[-4:]+")"
 	def __del__(self):
 		self.cursor.close();
 	def executeAndFetchAll(self, sql, params=None):

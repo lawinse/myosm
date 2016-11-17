@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*- 
 from Utils import *
+from MapConverter import MapConverter
 LAZY_START = True
 
 
@@ -41,6 +42,12 @@ class Queries:
 		result = dbh.executeAndFetchAll("select distinct id from current_way_nodes where node_id=%s",params=(tid,));
 		isIntersection = len(result) > 1;
 		way_list = [tp[0] for tp in result];
+
+		mc = MapConverter();
+		mc.add_root_point_byid(tid);
+		if len(way_list) > 0: mc.set_target_lines_byid(way_list);
+		mc.convert();
+
 		return (tid, way_list, isIntersection)
 
 	#########################################################################################################
@@ -60,12 +67,16 @@ class Queries:
 			return None;
 		dbh = DBHelper();
 		ret = [];
+		mc = MapConverter();
 		for wid in wid_list:
 			result = dbh.executeAndFetchAll("select node_id,sequence_id from current_way_nodes where id=%s order by sequence_id",params=(wid,));
 			node_list = [tp[0] for tp in result];
 			Nid2Coord = OtherUtils.GetNid2Coord();
 			node_list = [(nid, Nid2Coord[nid]) for nid in node_list];
+			mc.add_target_line([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in node_list]);
 			ret.append(node_list);
+		mc.convert();
+
 		return ret;
 
 	#########################################################################################################
@@ -108,12 +119,18 @@ class Queries:
 		poitype = OtherUtils.StdlizePOIType(poitype);
 		Nid2Coord = OtherUtils.GetNid2Coord();
 		dbh = DBHelper();
+		mc = MapConverter();
+		mc.add_root_point(tuple(coord));
+		mc.set_target_range(coord,DistanceUtils.degree_distance(radius));
 
 		raw = dbh.executeAndFetchAll("select id, latitude, longitude, st_distance(point(longitude/1e7, latitude/1e7),point(%s,%s))*111195 as dis "+\
 			"from current_nodes where (id in "+\
 			"(select distinct node_id from current_node_tags where k='poitype' and v=%s)) having dis<%s"+ \
 			" order by dis", params=(coord[1],coord[0],poitype,radius,));
 		result = [(tp[0], tp[3], [tp[1],tp[2]])for tp in raw]
+		mc.set_target_points_byid([tuple([item/DistanceUtils.coord_scale for item in tp[2]]) for tp in result])
+		mc.downsampling_target_points(num=5000);
+		mc.convert();
 		# candidates_nids = [tp[0] for tp in raw];
 		# result = []
 		# for nid in candidates_nids:
@@ -135,6 +152,8 @@ class Queries:
 		du = DistanceUtils();
 		raw = du.queryNN(pointlist = np.array([coord_int]), k_nn=k1);
 		dbh = DBHelper();
+		mc = MapConverter();
+		mc.add_target_point(tuple(coord));
 		wayid_middleSeq = {}
 		Nid2Coord = OtherUtils.GetNid2Coord();
 
@@ -161,6 +180,9 @@ class Queries:
 			if (tmp_dis < minDis):
 				minDis = tmp_dis
 				minDis_wid = way_id;
+		mc.add_target_line_byid(minDis_wid);
+		mc.set_background_lines_byid(wayid_middleSeq.keys()[:].remove(minDis_wid));
+		mc.convert();
 		return (minDis_wid,minDis,self.query2(way_id=minDis_wid));
 
 	#########################################################################################################
@@ -180,13 +202,21 @@ class Queries:
 	#* Desc: Find a routing path from A to B with certain routeType
 	#* Input: [string in ("car","walk","bike")] routeType, [list(float,2)] start_coord,end_coord
 	#* Return: The routing path
-	#* Return format: tuple([string in ("Success","Failed")] status, totalDistance, path)
+	#* Return format: tuple([string] status, totalDistance, path)
 	#*  path:=[node1,node2...] node:=(node_id,coord_int)
 	#########################################################################################################
 	def query_routing(self,routeType,start_coord,end_coord):
 		from Routing import Routing
 		ro = Routing(routeType);
-		return ro.findRoute(start_coord,end_coord)
+		ret = ro.findRoute(start_coord,end_coord)
+		mc = MapConverter();
+		if ret[0] == 'success':
+			mc.add_root_point(tuple(start_coord));
+			mc.add_root_point(tuple(end_coord));
+			mc.set_target_lines([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in path])
+
+		mc.convert();
+		return ret;
 
 	#########################################################################################################
 	#* Desc: Find poi pairs and ttl_distance from given coord, order by ttl_distance
@@ -201,6 +231,8 @@ class Queries:
 		Nid2Coord = OtherUtils.GetNid2Coord();
 		poi1 = OtherUtils.StdlizePOIType(poi1);
 		poi2 = OtherUtils.StdlizePOIType(poi2);
+		mc = MapConverter();
+		mc.add_root_point(tuple(coord));
 		dbh = DBHelper();
 		print ">>>>> Searching and Ordering ..."
 		# TODO: remains to be refined
@@ -215,8 +247,11 @@ class Queries:
 			"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v=%s) as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
 			"order by dis limit 0,%s",\
 			params = (coord[1],coord[0],coord[1],coord[0],poi1,poi2,num,) if order_sensitive == False else (coord[1],coord[0],poi1,poi2,num)) 
-		data = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]), tp[6])for tp in raw]
-		return data
+		ret = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]), tp[6])for tp in raw]
+		for tp in ret:
+			mc.add_target_pair_points_byid(tp[0][0],tp[1][0]);
+		mc.convert();
+		return ret
 
 	#########################################################################################################
 	#* Desc: Find the area with given radius which contains most poi (roughly)
@@ -227,6 +262,7 @@ class Queries:
 	def query_most_poi_within_radius(self, poitype,radius,need_precise = False):
 		import ctypes
 		poitype = OtherUtils.StdlizePOIType(poitype)
+		mc = MapConverter();
 
 		solve = OtherUtils.GetCirclePointSolver();
 
@@ -240,7 +276,10 @@ class Queries:
 		print ">>>>> Searching ..."
 		res = solve(radius,num_numbers,array_type(*x),array_type(*y),need_precise)
 		count = int(res[0])
-		return ([(int)res[1]*DistanceUtils.coord_scale,(int)res[2]*DistanceUtils.coord_scale],count)
+		mc.add_root_point((res[1],res[2]));
+		mc.set_target_range((res[1],res[2]),DistanceUtils.degree_distance(radius));
+		mc.convert();
+		return ([int(res[1]*DistanceUtils.coord_scale),int(res[2]*DistanceUtils.coord_scale)],count)
 
 	#########################################################################################################
 	#* Desc: Find a poi lying in middle of two point with some tolerance
@@ -252,7 +291,9 @@ class Queries:
 	def query_middle_poi(self,coord1,coord2,poitype,sum_tolerate=0.2,diff_tolerate=0.1,order_sensitive = False,num=2):
 		poitype = OtherUtils.StdlizePOIType(poitype);
 		line_dis_max = DistanceUtils.spherical_distance(coord1,coord2)*(1+sum_tolerate);
-		# print line_dis_max
+		mc = MapConverter();
+		mc.add_root_point(tuple(coord1));
+		mc.add_root_point(tuple(coord2));
 		dbh = DBHelper();
 
 		print ">>>>> Searching ..."
@@ -264,9 +305,12 @@ class Queries:
 			"having dis1+dis2<%s and abs(dis1-dis2)<least(dis1,dis2)*%s"+\
 			(" and dis1 > dis2 " if order_sensitive else " ") +\
 			"order by st_distance(point(a.longitude/1e7,a.latitude/1e7),point(%s,%s)) limit 0,%s",\
-			params=(coord1[1],coord1[0],coord2[1],coord2[0],poitype,line_dis_max,diff_tolerate,0.5*(coord2[1]+coord1[1]),0.5*(coord2[0]+coord1[0]),num,));
-
-		return [(tp[0],[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
+			params=(coord1[1],coord1[0],coord2[1],coord2[0],poitype,line_dis_max,diff_tolerate,\
+				0.5*(coord2[1]+coord1[1]),0.5*(coord2[0]+coord1[0]),num,));
+		ret = [(tp[0],[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
+		mc.set_target_points_byid([tp[0] for tp in ret])
+		mc.convert();
+		return ret;
 
 	#########################################################################################################
 	#* Desc: Find a poi by NAME (e.g. 电信营业厅) around a given location
@@ -276,11 +320,16 @@ class Queries:
 	#########################################################################################################
 	def query_poi_node_name_nearby(self,coord,poi_name,num=10):
 		nu = NodeNameUtils();
+		mc = MapConverter();
+		mc.add_root_point(tuple(coord));
 		print ">>>>> Searching ..."
 		node_list = nu.findIsA(poi_name)
 		coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
 		node_list = [(tp[0],tp[1],tp[2],DistanceUtils.spherical_distance(coord_int,tp[1])) for tp in node_list]
-		return sorted(node_list,key=lambda node:node[3])[:num]
+		ret = sorted(node_list,key=lambda node:node[3])[:num];
+		mc.set_target_points_byid([tp[0] for tp in ret]);
+		mc.convert();
+		return ret
 
 	#########################################################################################################
 	#* Desc: Commit/rollback a changeset by XML
@@ -301,10 +350,10 @@ class Queries:
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
+	print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
 	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"大型购物".decode('utf8'))
 	# print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
-	print myQuery.query2(way_name="杨高中路".decode('utf8'));
+	# print myQuery.query2(way_name="杨高中路".decode('utf8'));
 	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
 	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)

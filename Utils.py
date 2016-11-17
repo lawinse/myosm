@@ -12,6 +12,7 @@ from BM_25 import *;
 sys.setrecursionlimit(10000)
 eps = 1e-7
 coord_scale_default = 1e7
+earth_radius = 6370996.81
 
 if not os.path.exists(WORK_DIR+"data"):
 	os.mkdir(WORK_DIR+"data")
@@ -70,17 +71,17 @@ class DistanceUtils:
 		def oi(a):
 		    return math.pi * a / 180
 		def Td(a, b, c, d):
-		    return 6370996.81 * math.acos(math.sin(c) * math.sin(d) + math.cos(c) * math.cos(d) * math.cos(b - a))
+		    return earth_radius * math.acos(math.sin(c) * math.sin(d) + math.cos(c) * math.cos(d) * math.cos(b - a))
 		def getD(a, b):
 		    if not a or not b:
 		        return 0;
-		    a[1] = ew(a[1], -180, 180);
-		    a[0] = lw(a[0], -74, 74);
-		    b[1] = ew(b[1], -180, 180);
-		    b[0] = lw(b[0], -74, 74);
 		    return Td(oi(a[1]), oi(b[1]), oi(a[0]), oi(b[0]))
 		return getD([f[0]/DistanceUtils.coord_scale,f[1]/DistanceUtils.coord_scale],[t[0]/DistanceUtils.coord_scale,t[1]/DistanceUtils.coord_scale])\
 			 if abs(f[0]) > DistanceUtils.coord_scale else getD([f[0],f[1]],[t[0],t[1]])
+
+	@classmethod
+	def degree_distance(cls,spherical_dis):
+		return spherical_dis/earth_radius*180/math.pi;
 
 	def getHeight(self,top,left,right):
 		l1 = DistanceUtils.spherical_distance(top,left);
@@ -347,10 +348,10 @@ if __name__ == '__main__':
 	# WayNameUtils.Build();
 	# print OtherUtils.StdlizePOIType("高校".decode('utf8'))
 	# DistanceUtils.Build()
-	# frompoint = [312269073, 1215310363]
-	# topoint = [312268644, 1215310825]
-	# print DistanceUtils.spherical_distance(frompoint,topoint)
-	nu = NodeNameUtils();
+	frompoint = [32.060255,118.796877]
+	topoint = [39.904211,116.407395]
+	print DistanceUtils.spherical_distance(frompoint,topoint)
+	# nu = NodeNameUtils();
 	# print NodeNameUtils.Name2id["中国浦发".decode("utf8")]
 	# retli = nu.getMostSim("中国民生银行".decode('utf8'))
 	# for ret in retli:
@@ -360,7 +361,7 @@ if __name__ == '__main__':
 	# 	retli = nu.getMostSim(target.decode('utf8'))
 	# 	for ret in retli:
 	# 		print ret[0],ret[1],ret[2]
-	WayNameUtils.Build();
+	# WayNameUtils.Build();
 	# wnu = WayNameUtils();
 	# retli = wnu.findSim("杨高中路".decode('utf8'))
 	# for ret in retli:
