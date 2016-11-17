@@ -35,6 +35,14 @@ class MapConverter:
 		# TODO
 		pass
 
+	def set_target_points_byid(self,points):
+		# TODO
+		pass
+
+	def add_target_point_byid(self,point):
+		# TODO
+		pass
+
 	def unique_target_points(self):
 		self.__target_points = list(set(self.__target_points));
 		
@@ -46,6 +54,14 @@ class MapConverter:
 		pass
 
 	def add_target_line(self,line):
+		# TODO
+		pass
+
+	def set_target_lines_byid(self,lines):
+		# TODO
+		pass
+
+	def add_target_line_byid(self,line):
 		# TODO
 		pass
 

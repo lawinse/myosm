@@ -11,6 +11,12 @@ class Queries:
 			WayNameUtils.Build();
 			OtherUtils.Build();
 
+	#########################################################################################################
+	#* Desc: Given a node and find all the ways containing it and whether it is a intersection
+	#* Input: [int]node_id (useless) or [list(float,2)]coord or [string]node_name (the name of target_node)
+	#* Return: node_id, all the way_id, whether it is a intersection
+	#* Return format: tuple ( [int]node_id, [list]list of way_id, [bool]whether it is ai intersection
+	#########################################################################################################
 	def query1(self, node_id=None,coord=None,node_name=None):  # type(coord)=list 
 		tid = -1;
 		if node_id==None and coord==None and node_name == None:
@@ -22,7 +28,13 @@ class Queries:
 			tid = raw[0][0][0];
 		elif node_name != None:
 			nu = NodeNameUtils();
-			tid = nu.getMostSim(node_name)[0][3];
+			tid_list = nu.getMostSim(node_name)[0][3];	# try to get random one along way if there are mutiple choices
+			dbh = DBHelper();
+			for tid in tid_list:
+				result = dbh.executeAndFetchAll("select distinct id from current_way_nodes where node_id=%s",params=(tid,));
+				isIntersection = len(result) > 1;
+				way_list = [tp[0] for tp in result];
+				if len(way_list)>0: return (tid, way_list, isIntersection)
 		else:
 			tid = node_id;
 		dbh = DBHelper();
@@ -31,16 +43,34 @@ class Queries:
 		way_list = [tp[0] for tp in result];
 		return (tid, way_list, isIntersection)
 
-	def query2(self,way_id=None):       # assume given by way_id
-		if way_id == None:
+	#########################################################################################################
+	#* Desc: Given a way and find all the nodes along it
+	#* Input: [int]way_id (useless) or [string]way_name (the name of target_way)
+	#* Return: a list consisting of all the way segments
+	#* Return format: list[seg1,seg2,seg3...] 
+	#*   seg := list [node1,node2,node3...] node := tuple(node_id, coord_int)
+	#########################################################################################################
+	def query2(self,way_id=None, way_name=None):       # assume given by way_id
+		if way_id != None:
+			wid_list = [way_id];
+		elif way_name != None:
+			wnu = WayNameUtils();
+			wid_list = wnu.getMostSim(way_name)[0][3];
+		else:
 			return None;
 		dbh = DBHelper();
-		result = dbh.executeAndFetchAll("select node_id,sequence_id from current_way_nodes where id=%s order by sequence_id",params=(way_id,));
-		node_list = [tp[0] for tp in result];
-		Nid2Coord = OtherUtils.GetNid2Coord();
-		node_list = [(nid, Nid2Coord[nid]) for nid in node_list];
-		return node_list;
+		ret = [];
+		for wid in wid_list:
+			result = dbh.executeAndFetchAll("select node_id,sequence_id from current_way_nodes where id=%s order by sequence_id",params=(wid,));
+			node_list = [tp[0] for tp in result];
+			Nid2Coord = OtherUtils.GetNid2Coord();
+			node_list = [(nid, Nid2Coord[nid]) for nid in node_list];
+			ret.append(node_list);
+		return ret;
 
+	#########################################################################################################
+	#* Desc: Similar usage as query2, perhaps deprecated
+	#########################################################################################################
 	def query3(self,way_name):
 		wnu = WayNameUtils();
 		raw = wnu.getMostSim(way_name);
@@ -66,6 +96,13 @@ class Queries:
 			all_results.append(wn_li);
 		return all_results;
 
+	#########################################################################################################
+	#* Desc: Find all the poi in the area given center coord and radius
+	#* Input: [string]poitype, [list(float,2)] coord, [float] radius
+	#* Return: a list of target poi nodes
+	#* Return format: list[node1,node2,node3...] 
+	#*   node := tuple(node_id, [float]distance, coord_int)
+	#########################################################################################################
 	def query4(self,poitype,coord,radius):
 		# coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
 		poitype = OtherUtils.StdlizePOIType(poitype);
@@ -84,6 +121,12 @@ class Queries:
 		# 		result.append((nid,[Nid2Coord[nid]]))
 		return result;
 
+	#########################################################################################################
+	#* Desc: Find the nearest way of given coord
+	#* Input: [list(float,2)] coord
+	#* Return: the way with least distance and its inforamtion
+	#* Return format: tuple(way_id, [float] min_dis, query2(way_id))
+	#########################################################################################################
 	def query5(self, coord, k1=8, k2=5):
 		# k1 means the number of neigh we filter out; 
 		# k2 indicates the number of nodes along the way to calc distance
@@ -120,6 +163,12 @@ class Queries:
 				minDis_wid = way_id;
 		return (minDis_wid,minDis,self.query2(way_id=minDis_wid));
 
+	#########################################################################################################
+	#* Desc: Generate new osm with given range of lat and lon
+	#* Input: [string] filename, [float]minLat, maxLat, minLon, maxLon
+	#* Return: filename of osm file
+	#* Return format: [string] filename
+	#########################################################################################################
 	def query6(self, filename, minLat, maxLat, minLon, maxLon):
 		from OsmGenerator import OsmGenerator
 		gen = OsmGenerator(filename,minLat, maxLat, minLon, maxLon);
@@ -127,11 +176,26 @@ class Queries:
 		gen.commit();
 		return filename
 
+	#########################################################################################################
+	#* Desc: Find a routing path from A to B with certain routeType
+	#* Input: [string in ("car","walk","bike")] routeType, [list(float,2)] start_coord,end_coord
+	#* Return: The routing path
+	#* Return format: tuple([string in ("Success","Failed")] status, totalDistance, path)
+	#*  path:=[node1,node2...] node:=(node_id,coord_int)
+	#########################################################################################################
 	def query_routing(self,routeType,start_coord,end_coord):
 		from Routing import Routing
 		ro = Routing(routeType);
 		return ro.findRoute(start_coord,end_coord)
 
+	#########################################################################################################
+	#* Desc: Find poi pairs and ttl_distance from given coord, order by ttl_distance
+	#* Input: [list(float,2)]coord, [string]poi1,poi2, 
+	#*   [bool]order_senstive (whether considering order), [int]candidate number
+	#* Return: poi pair order by distance
+	#* Return format: list[(poi1,poi2,[float]ttl_line_distance)]
+	#*  poi:=(node_id,coord_int)
+	#########################################################################################################
 	def query_pair_poitype(self,coord,poi1,poi2,order_sensitive=False,num=5):
 		du = DistanceUtils();
 		Nid2Coord = OtherUtils.GetNid2Coord();
@@ -153,6 +217,13 @@ class Queries:
 			params = (coord[1],coord[0],coord[1],coord[0],poi1,poi2,num,) if order_sensitive == False else (coord[1],coord[0],poi1,poi2,num)) 
 		data = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]), tp[6])for tp in raw]
 		return data
+
+	#########################################################################################################
+	#* Desc: Find the area with given radius which contains most poi (roughly)
+	#* Input: [[string] poitype, [float] radius, [bool] whether needs precisely calc
+	#* Return: the area
+	#* Return format: (coord_int, num of poi)
+	#########################################################################################################	
 	def query_most_poi_within_radius(self, poitype,radius,need_precise = False):
 		import ctypes
 		poitype = OtherUtils.StdlizePOIType(poitype)
@@ -169,8 +240,15 @@ class Queries:
 		print ">>>>> Searching ..."
 		res = solve(radius,num_numbers,array_type(*x),array_type(*y),need_precise)
 		count = int(res[0])
-		return ([res[1]*DistanceUtils.coord_scale,res[2]*DistanceUtils.coord_scale],count)
+		return ([(int)res[1]*DistanceUtils.coord_scale,(int)res[2]*DistanceUtils.coord_scale],count)
 
+	#########################################################################################################
+	#* Desc: Find a poi lying in middle of two point with some tolerance
+	#* Input: [list(float,2)]coord1，coord2, [stirng] poitype, [float] sum_tolerate,diff_tolerate,
+	#*   [bool] is order sensitive, [int] candidate num
+	#* Return: the candidates ordered by ttl_distance
+	#* Return format: list(tuple(node_id,coord_int,[float]distance1,[float]distance2))
+	#########################################################################################################
 	def query_middle_poi(self,coord1,coord2,poitype,sum_tolerate=0.2,diff_tolerate=0.1,order_sensitive = False,num=2):
 		poitype = OtherUtils.StdlizePOIType(poitype);
 		line_dis_max = DistanceUtils.spherical_distance(coord1,coord2)*(1+sum_tolerate);
@@ -190,6 +268,12 @@ class Queries:
 
 		return [(tp[0],[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
 
+	#########################################################################################################
+	#* Desc: Find a poi by NAME (e.g. 电信营业厅) around a given location
+	#* Input: [list(float,2)]coord, [stirng] poi_name, [int] candidate num
+	#* Return: the candidates ordered by distance
+	#* Return format: list(tuple(node_id, coord_int, node_name, distance))
+	#########################################################################################################
 	def query_poi_node_name_nearby(self,coord,poi_name,num=10):
 		nu = NodeNameUtils();
 		print ">>>>> Searching ..."
@@ -198,6 +282,12 @@ class Queries:
 		node_list = [(tp[0],tp[1],tp[2],DistanceUtils.spherical_distance(coord_int,tp[1])) for tp in node_list]
 		return sorted(node_list,key=lambda node:node[3])[:num]
 
+	#########################################################################################################
+	#* Desc: Commit/rollback a changeset by XML
+	#* Input: [list(string)] XML filename list
+	#* Return: the changeset id list, -1 denotes a rollback
+	#* Return format: list(int)
+	#########################################################################################################
 	def query_changesets(self, fiilenames=None):
 		from ChangeSetUtils import ChangeSetTask
 		task = ChangeSetTask();
@@ -214,7 +304,7 @@ if __name__ == '__main__':
 	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
 	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"大型购物".decode('utf8'))
 	# print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
-	print myQuery.query_routing("car",[30.8754122,120.3469386],[30.8754122, 120.4469386]);
+	print myQuery.query2(way_name="杨高中路".decode('utf8'));
 	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
 	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)
