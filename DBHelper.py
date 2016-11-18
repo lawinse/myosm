@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-  
 import sys,os
-from Config import WORK_DIR
+from Config import *
 reload(sys)
 sys.setdefaultencoding("utf-8")
 import MySQLdb
@@ -24,7 +24,6 @@ class DBHelper:
 		except:
 			DBHelper.Build()
 			self.cursor = DBHelper.DBC.cursor();
-		self.name = 'dbh(' + str(hash(datetime.datetime.now()))[-4:]+")"
 	def __del__(self):
 		self.cursor.close();
 	def executeAndFetchAll(self, sql, params=None):
@@ -46,7 +45,7 @@ class DBHelper:
 			DBHelper.PrintLog();
 			DBHelper.DumpLog();
 	def execute(self, sql, params=None, need_commit=False):
-		DBHelper.LOGGER.append(self.name+' --> '+sql+(("  params:"+str(params)) if params != None else ""));
+		DBHelper.LOGGER.append('['+datetime.datetime.now().strftime("%H:%M:%S")+'] --> '+sql+(("  params:"+str(params)) if params != None else ""));
 		if need_commit:
 			try:
 				self.cursor.execute(sql) if params == None else self.cursor.execute(sql,params);
@@ -101,7 +100,7 @@ class DBHelper:
 
 if __name__ == '__main__':
 	dbh = DBHelper();
-	print len(dbh.executeAndFetchAll("select * from current_nodes where id=-1"))
+	print len(dbh.executeAndFetchAll("select * from current_nodes where isd=-1"))
 	dbh.commit();
 	# for i in range(100):
 	# 	dbh.executeAndFetchAll("select * from current_nodes where id=%s",params=(26609107+i,));

@@ -7,7 +7,7 @@ from Utils import coord_scale_default as csd
 import gc
 
 
-# This Convverter would be used by visualization
+# This Converter would be used by visualization
 class MapConverter:
 	def __init__(self):
 		self.__root_points = [] #root_points[i] = (lat1, lon1)
@@ -96,7 +96,9 @@ class MapConverter:
 	def get_target_lines(self):
 		return self.__target_lines;
 
-	def get_target_bounder(self):
+	def set_target_bounder(self,bounder):
+		self.__target_bounder = bounder;
+	def get_target_bounder(self,border_ratio=0.1):
 		if len(self.__target_bounder) == 0:
 			minLat=90
 			minLon=180
@@ -115,6 +117,12 @@ class MapConverter:
 					minLon = min(point[1],minLon);
 					maxLon = max(point[1],maxLon);
 
+			latDiff = maxLat-minLat;
+			lonDiff = maxLon-minLon;
+			minLat -= latDiff*border_ratio;
+			maxLat += latDiff*border_ratio;
+			minLon -= lonDiff*border_ratio;
+			maxLat += lonDiff*border_ratio;
 			self.__target_bounder = (minLat, minLon, maxLat, maxLon)
 		return self.__target_bounder;
 
@@ -126,7 +134,17 @@ class MapConverter:
 		else:
 			sample_n = int(len(self.__target_points)*ratio)
 		import random
-		return random.sample(self.target_points,sample_n);
+		return random.sample(self.__target_points,sample_n);
+
+	def downsampling_target_lines(self,num=None,ratio=1.0):
+		if num != None:
+			if int(len(self.__target_lines)/num) <= 1:
+				return;
+			sample_n = num;
+		else:
+			sample_n = int(len(self.__target_lines)*ratio)
+		import random
+		return random.sample(self.__target_lines,sample_n);
 
 	def get_background_points(self,num=None,ratio=1.0):
 		(minLat, minLon, maxLat, maxLon) = self.get_target_bounder();
@@ -168,11 +186,22 @@ class MapConverter:
 	def get_target_range(self):
 		return self.__target_range;
 
+	def report(self):
+		print "\n###################\nMap Report:"
+		print "[Range]\nminLat=%f, minLon=%f\nmaxLat=%f, maxLon=%f" % self.get_target_bounder();
+		print "[Size Info]"
+		print "#root_points: %d" % len(self.__root_points);
+		print "#target_points: %d" % len(self.__target_points);
+		print "#target_lines: %d" % sum([len(line)-1 for line in self.__target_lines]);
+		print "###################\n"
+
+
 	def convert(self):
 		MapConverter.DoConvert(self);
 	@staticmethod
 	def DoConvert(mpcnvtr):
 		#TODO
 		print ">>>>> Converting to graph ..."
+		mpcnvtr.report();
 	
 

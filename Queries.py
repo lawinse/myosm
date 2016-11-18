@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*- 
 from Utils import *
 from MapConverter import MapConverter
-LAZY_START = True
+
 
 
 class Queries:
@@ -10,6 +10,7 @@ class Queries:
 			DistanceUtils.Build();
 			NodeNameUtils.Build();
 			WayNameUtils.Build();
+			Routing.Build();
 			OtherUtils.Build();
 
 	#########################################################################################################
@@ -57,7 +58,7 @@ class Queries:
 	#* Return format: list[seg1,seg2,seg3...] 
 	#*   seg := list [node1,node2,node3...] node := tuple(node_id, coord_int)
 	#########################################################################################################
-	def query2(self,way_id=None, way_name=None):       # assume given by way_id
+	def query2(self,way_id=None, way_name=None, no_graph=False):       # assume given by way_id
 		if way_id != None:
 			wid_list = [way_id];
 		elif way_name != None:
@@ -73,9 +74,11 @@ class Queries:
 			node_list = [tp[0] for tp in result];
 			Nid2Coord = OtherUtils.GetNid2Coord();
 			node_list = [(nid, Nid2Coord[nid]) for nid in node_list];
+			mc.add_target_pair_points_byid(nid);
 			mc.add_target_line([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in node_list]);
 			ret.append(node_list);
-		mc.convert();
+		if not no_graph: 
+			mc.convert();
 
 		return ret;
 
@@ -128,7 +131,7 @@ class Queries:
 			"(select distinct node_id from current_node_tags where k='poitype' and v=%s)) having dis<%s"+ \
 			" order by dis", params=(coord[1],coord[0],poitype,radius,));
 		result = [(tp[0], tp[3], [tp[1],tp[2]])for tp in raw]
-		mc.set_target_points_byid([tuple([item/DistanceUtils.coord_scale for item in tp[2]]) for tp in result])
+		mc.set_target_points([tuple([item/DistanceUtils.coord_scale for item in tp[2]]) for tp in result])
 		mc.downsampling_target_points(num=5000);
 		mc.convert();
 		# candidates_nids = [tp[0] for tp in raw];
@@ -183,7 +186,7 @@ class Queries:
 		mc.add_target_line_byid(minDis_wid);
 		mc.set_background_lines_byid(wayid_middleSeq.keys()[:].remove(minDis_wid));
 		mc.convert();
-		return (minDis_wid,minDis,self.query2(way_id=minDis_wid));
+		return (minDis_wid,minDis,self.query2(way_id=minDis_wid,no_graph=True));
 
 	#########################################################################################################
 	#* Desc: Generate new osm with given range of lat and lon
@@ -213,7 +216,7 @@ class Queries:
 		if ret[0] == 'success':
 			mc.add_root_point(tuple(start_coord));
 			mc.add_root_point(tuple(end_coord));
-			mc.set_target_lines([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in path])
+			mc.add_target_line([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in ret[2]])
 
 		mc.convert();
 		return ret;
@@ -345,19 +348,32 @@ class Queries:
 		ret = task.execute();
 		return ret;
 
+	#########################################################################################################
+	#* Desc: Simply create a graph (just nodes) for given bounder for main page
+	#* Input: [list(float,2)]coord, [float]minLat, maxLat, minLon, maxLon
+	#* Return: None
+	#########################################################################################################
+	def query_region_graph(self,coord,minLat,maxLat,minLon,maxLon):
+		mc = MapConverter();
+		mc.add_root_point(tuple(coord));
+		mc.set_target_bounder((minLat, minLon, maxLat, maxLon));
+		mc.convert();
+		return;
+
 
 
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
+	# print myQuery.query_routing("car",[31.1981978,121.4152321],[31.2075866,121.6090868]);
+	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
 	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"大型购物".decode('utf8'))
 	# print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
-	# print myQuery.query2(way_name="杨高中路".decode('utf8'));
+	print myQuery.query2(way_name="杨高中路".decode('utf8'));
 	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
-	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)
-	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
+	print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)
+	print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
 	# while 1:
 	# 	a = raw_input();
 	# 	print myQuery.query5(coord=eval(a))
