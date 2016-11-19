@@ -1,4 +1,8 @@
-import os
+import os,sys
 
-WORK_DIR = "./app/myosm/" if 'www' in os.getcwd().lower() else "./"
+if 'www' in os.getcwd().lower():
+	WORK_DIR = "./app/myosm/"
+	sys.path.append(WORK_DIR)
+else:
+	WORK_DIR = "./"
 LAZY_START = True
