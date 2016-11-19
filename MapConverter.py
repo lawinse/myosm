@@ -49,6 +49,10 @@ class MapConverter:
 	def add_target_point(self,point):
 		self.__target_points.append(point);
 
+	def add_root_point_byid(self,pointid):
+		Nid2Coord = OtherUtils.GetNid2Coord();
+		self.__root_points.append(tuple([item/csd for item in Nid2Coord[pointid]]));
+
 	def add_root_point(self,point):
 		self.__root_points.append(point);
 
@@ -82,16 +86,16 @@ class MapConverter:
 		self.__target_lines.append(line)
 
 	def __line2pointlists(self,lineid):
-		raw = self.dbh.executeAndFetchAll("select node_id from current_way_nodes where id=%s order by sequence_id");
+		raw = self.__dbh.executeAndFetchAll("select node_id from current_way_nodes where id=%s order by sequence_id",params=(lineid,));
 		node_id_list = [tp[0] for tp in raw];
 		Nid2Coord = OtherUtils.GetNid2Coord();
 		return [tuple([item/csd for item in Nid2Coord[pid]]) for pid in node_id_list]
 
 	def set_target_lines_byid(self,lineids):
-		self.__target_lines = [__line2pointlists(lineid) for lineid in set(lineids)]
+		self.__target_lines = [self.__line2pointlists(lineid) for lineid in set(lineids)]
 
 	def add_target_line_byid(self,lineid):
-		self.__target_lines.append(__line2pointlists(lineid));
+		self.__target_lines.append(self.__line2pointlists(lineid));
 
 	def get_target_lines(self):
 		return self.__target_lines;
@@ -165,10 +169,10 @@ class MapConverter:
 		return sample_bgp
 
 	def set_background_lines_byid(self,lineids):
-		self.__background_lines = [__line2pointlists(lineid) for lineid in set(lineids)]
+		self.__background_lines = [self.__line2pointlists(lineid) for lineid in set(lineids)]
 
 	def add_background_line_byid(self,lineid):
-		self.__background_lines.append(__line2pointlists(lineid));
+		self.__background_lines.append(self.__line2pointlists(lineid));
 
 	def get_background_lines(self,num=None,ratio=1.0):
 		if num != None:
