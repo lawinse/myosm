@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.externals import joblib
 from scipy import spatial
 from DBHelper import *
-from BKTree import *
+from BKTree_EditDistance import *
 import sys
 import math
 import re
