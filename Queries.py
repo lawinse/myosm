@@ -74,7 +74,7 @@ class Queries:
 			node_list = [tp[0] for tp in result];
 			Nid2Coord = OtherUtils.GetNid2Coord();
 			node_list = [(nid, Nid2Coord[nid]) for nid in node_list];
-			mc.add_target_pair_points_byid(nid);
+			mc.add_target_point_byid(nid);
 			mc.add_target_line([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in node_list]);
 			ret.append(node_list);
 		if not no_graph: 
@@ -365,16 +365,16 @@ class Queries:
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	print myQuery.query1(coord=[31,121])
+	print myQuery.query1(node_name="人民广场".decode('utf8'))
 	# print myQuery.query_routing("car",[31.1981978,121.4152321],[31.2075866,121.6090868]);
 	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
 	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"大型购物".decode('utf8'))
 	# print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
-	print myQuery.query2(way_name="杨高中路".decode('utf8'));
+	# print myQuery.query2(way_name="杨高中路".decode('utf8'));
 	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
-	print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)
-	print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
+	# print myQuery.query_pair_poitype([31.1977664,121.4147976],"酒店".decode('utf8'),"加油站".decode('utf8'),order_sensitive=False)
+	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
 	# while 1:
 	# 	a = raw_input();
 	# 	print myQuery.query5(coord=eval(a))
