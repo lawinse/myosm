@@ -278,12 +278,14 @@ class OtherUtils:
 	Relation_Father = None
 	Poi_Mapping = None
 	Circle_Point_Solver = None;
+	POI_Pair_Solver = None;
 	@staticmethod
 	def Build(rebuild=False):
 		print ">>>>> Initalize OtherUtils ..."
 		OtherUtils.GetRelationFather(rebuild);
 		OtherUtils.GetNid2Coord(rebuild);
 		OtherUtils.GetCirclePointSolver(rebuild);
+		OtherUtils.GetPOIPairSolver(rebuild);
 		OtherUtils.StdlizePOIType("",rebuild);
 		print ">>>>> Done Initalization"
 	@staticmethod
@@ -324,14 +326,33 @@ class OtherUtils:
 				joblib.dump(ret,WORK_DIR+"data/Relation_Father.dat",compress=3)
 			OtherUtils.Relation_Father = ret;
 		return OtherUtils.Relation_Father;
+
+	@staticmethod
+	def GetPOIPairSolver(rebuild=False):
+		if OtherUtils.POI_Pair_Solver == None or rebuild:
+			import ctypes
+			# if not os.path.exists(WORK_DIR+"circle_point.so"):
+			os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+WORK_DIR+"cUtils.cpp -o "+WORK_DIR+"cUtils.so")
+			dll = ctypes.cdll.LoadLibrary(WORK_DIR+'cUtils.so')
+			solve = dll.solve_poi_pair
+			solve.restype = ctypes.c_int;
+			solve.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double),\
+				ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), \
+				ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_bool,\
+				ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double),\
+				ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), \
+				ctypes.POINTER(ctypes.c_double)]
+			OtherUtils.POI_Pair_Solver = solve;
+		return OtherUtils.POI_Pair_Solver;
+
 	@staticmethod
 	def GetCirclePointSolver(rebuild=False):
 		if OtherUtils.Circle_Point_Solver == None or rebuild:
 			import ctypes
 			# if not os.path.exists(WORK_DIR+"circle_point.so"):
-			os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+WORK_DIR+"circle_point.cpp -o "+WORK_DIR+"circle_point.so")
-			dll = ctypes.cdll.LoadLibrary(WORK_DIR+'circle_point.so')
-			solve = dll.solve
+			os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+WORK_DIR+"cUtils.cpp -o "+WORK_DIR+"cUtils.so")
+			dll = ctypes.cdll.LoadLibrary(WORK_DIR+'cUtils.so')
+			solve = dll.solve_circle_point
 			solve.restype = ctypes.POINTER(ctypes.c_double)
 			solve.argtypes = [ctypes.c_double,ctypes.c_int,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double),ctypes.c_bool]
 			OtherUtils.Circle_Point_Solver = solve;
