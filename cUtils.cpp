@@ -168,12 +168,6 @@ extern "C"{
         int i,j;
         for (i=0; i<n1; ++i) {
         	for (j=0; j<n2; ++j) {
-        		double aaa = order_dist(x,y,x1[i],y1[i],x2[j],y2[j],order_sensitive);
-	        		// if (aaa < 700 || id1[i] == 29381 && id2[j] == 35877) {
-	        		// 	printf("%f\n", aaa);
-	        		// 	printf("%f %f\n", x1[i],y1[i]);
-	        		// }
-
 
 	        	if (min_heap.size() < k) min_heap.emplace(i,j);
 	        	else {
