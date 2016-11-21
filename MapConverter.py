@@ -74,7 +74,9 @@ class MapConverter:
 
 	def unique_target_points(self):
 		self.__target_points = list(set(self.__target_points));
-		
+	
+	def get_root_points(self):
+		return self.__root_points;
 	def get_target_points(self):
 		self.unique_target_points();
 		return self.__target_points;
@@ -194,9 +196,9 @@ class MapConverter:
 		print "\n###################\nMap Report:"
 		print "[Range]\nminLat=%f, minLon=%f\nmaxLat=%f, maxLon=%f" % self.get_target_bounder();
 		print "[Size Info]"
-		print "#root_points: %d" % len(self.__root_points);
-		print "#target_points: %d" % len(self.__target_points);
-		print "#target_lines: %d" % sum([len(line)-1 for line in self.__target_lines]);
+		print "#root_points: %d" % len(self.get_root_points());
+		print "#target_points: %d" % len(self.get_target_points());
+		print "#target_lines: %d" % sum([len(line)-1 for line in self.get_target_lines()]);
 		print "###################\n"
 
 

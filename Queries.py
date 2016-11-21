@@ -241,11 +241,11 @@ class Queries:
 		solve = OtherUtils.GetPOIPairSolver();
 		print ">>>>> Searching ..."
 
-		nodelist1 = dbh.executeAndFetchAll("select id,latitude/1e7,longitude/1e7 from current_nodes where id in "+\
-			"(select distinct node_id from current_node_tags where k='poitype' and v=%s) order by st_distance(point(longitude/1e7,latitude/1e7),point(%s,%s))",\
+		nodelist1 = dbh.executeAndFetchAll("select id,latitude/1e7,longitude/1e7 from current_nodes right join "+\
+			"(select distinct node_id from current_node_tags where k='poitype' and v=%s) as a on current_nodes.id=a.node_id order by st_distance(point(longitude/1e7,latitude/1e7),point(%s,%s))",\
 			params = (poi1,coord[1],coord[0]))
-		nodelist2 = dbh.executeAndFetchAll("select id,latitude/1e7,longitude/1e7 from current_nodes where id in "+\
-			"(select distinct node_id from current_node_tags where k='poitype' and v=%s) order by st_distance(point(longitude/1e7,latitude/1e7),point(%s,%s))",\
+		nodelist2 = dbh.executeAndFetchAll("select id,latitude/1e7,longitude/1e7 from current_nodes right join "+\
+			"(select distinct node_id from current_node_tags where k='poitype' and v=%s) as a on current_nodes.id=a.node_id order by st_distance(point(longitude/1e7,latitude/1e7),point(%s,%s))",\
 			params = (poi2,coord[1],coord[0]))
 
 
@@ -411,7 +411,7 @@ if __name__ == '__main__':
 	# print myQuery.query2(way_name="杨高中路".decode('utf8'));
 	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
-	print myQuery.query_pair_poitype([31.025403,121.431028],"住宅区".decode('utf8'),"美食".decode('utf8'),order_sensitive=False)
+	print myQuery.query_pair_poitype([31.025403,121.431028],"住宅区".decode('utf8'),"美食".decode('utf8'),order_sensitive=False,num=30)
 	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
 	# while 1:
 	# 	a = raw_input();

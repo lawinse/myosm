@@ -136,6 +136,7 @@ void _solve_poi_pair(int id, int n1, int *id1, double *x1, double *y1,
         	if (dist(x,y,x1[i],y1[i]) > cur_max_dis*1.2) break;
         }
     	for (j=0; j<n2; ++j) {
+    		if (id1[i] == id2[j]) continue;
         	if (max_heap.size() < k) max_heap.emplace(i,j);
         	else {
         		pair<int,int> cur_p = max_heap.top();
@@ -146,7 +147,7 @@ void _solve_poi_pair(int id, int n1, int *id1, double *x1, double *y1,
         			max_heap.pop();
         			max_heap.emplace(i,j);
         		} else if (order_dist_part(x,y,x1[i],y1[i],x2[j],y2[j],order_sensitive) > cur_max_dis) {
-        			continue;
+        			break;
         		}
 
         	}
