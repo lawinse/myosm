@@ -6,10 +6,12 @@
 #include <thread>
 #include <cstring>
 #include <queue>
+#include <vector>
 using namespace std;
 #define PI 3.14159265358979323846
 #define R 6370996.81
 #define ROUGH_BASE 10000
+#define CORE_NUM 4
 
 struct Point{
 	int id;
@@ -114,11 +116,58 @@ void _solve_circle_point(int id, double r, int num, double *px, double *py,doubl
 		return;
 	}
 
+void _solve_poi_pair(int id, int n1, int *id1, double *x1, double *y1, 
+		int n2, int*id2, double *x2, double *y2, 
+		double x, double y, int k, bool order_sensitive,
+		vector<pair<int,int>>& subret){
+
+	auto comp = [x,y,x1,y1,x2,y2,order_sensitive](pair<int, int> a, pair<int, int> b) {
+        	double dis_a = order_dist(x,y,x1[a.first],y1[a.first],x2[a.second],y2[a.second],order_sensitive);
+        	double dis_b = order_dist(x,y,x1[b.first],y1[b.first],x2[b.second],y2[b.second],order_sensitive);
+            return dis_a < dis_b;
+        };
+
+    priority_queue<pair<int, int>, vector<pair<int, int>>, decltype(comp)> max_heap(comp);
+    int i,j;
+    for (i=id; i<n1; i+=CORE_NUM) {
+    	if (max_heap.size() == k){
+        	pair<int,int> cur_p = max_heap.top();
+        	double cur_max_dis = order_dist(x,y,x1[cur_p.first],y1[cur_p.first],x2[cur_p.second],y2[cur_p.second],order_sensitive);
+        	if (dist(x,y,x1[i],y1[i]) > cur_max_dis*1.2) break;
+        }
+    	for (j=0; j<n2; ++j) {
+        	if (max_heap.size() < k) max_heap.emplace(i,j);
+        	else {
+        		pair<int,int> cur_p = max_heap.top();
+        		double cur_max_dis = order_dist(x,y,x1[cur_p.first],y1[cur_p.first],x2[cur_p.second],y2[cur_p.second],order_sensitive);
+        		double new_dis = order_dist(x,y,x1[i],y1[i],x2[j],y2[j],order_sensitive);
+
+        		if (new_dis < cur_max_dis) {
+        			max_heap.pop();
+        			max_heap.emplace(i,j);
+        		} else if (order_dist_part(x,y,x1[i],y1[i],x2[j],y2[j],order_sensitive) > cur_max_dis) {
+        			continue;
+        		}
+
+        	}
+        }
+    }
+
+    subret.clear();
+
+    while(!max_heap.empty()){
+    	subret.push_back(max_heap.top());max_heap.pop();
+    }
+    return;
+
+
+}
+
 extern "C"{
 	double* solve_circle_point(double r, int num, double *px, double *py, bool precise){
 		double *ret = new double[3];
 		if (num > ROUGH_BASE*1.5 && !precise) {
-			const int REPEAT = 4;
+			const int REPEAT = CORE_NUM;
 			printf(">>>>> %d works concurrently ...\n",REPEAT);
 			thread t[REPEAT];
 			double ** Px = new double *[REPEAT];
@@ -156,40 +205,38 @@ extern "C"{
 		double x, double y, int k, bool order_sensitive,
 		int *idret1, double * xret1, double *yret1, int* idret2, double *xret2, double *yret2, double* disret){
 
-		// printf("%f %f\n", x,y);
+		int i,j;
 
         auto comp = [x,y,x1,y1,x2,y2,order_sensitive](pair<int, int> a, pair<int, int> b) {
 
         	double dis_a = order_dist(x,y,x1[a.first],y1[a.first],x2[a.second],y2[a.second],order_sensitive);
         	double dis_b = order_dist(x,y,x1[b.first],y1[b.first],x2[b.second],y2[b.second],order_sensitive);
 
-            return dis_a < dis_b;};
-        priority_queue<pair<int, int>, vector<pair<int, int>>, decltype(comp)> min_heap(comp);
-        int i,j;
-        for (i=0; i<n1; ++i) {
-        	for (j=0; j<n2; ++j) {
-
-	        	if (min_heap.size() < k) min_heap.emplace(i,j);
-	        	else {
-	        		pair<int,int> cur_p = min_heap.top();
-	        		double cur_max_dis = order_dist(x,y,x1[cur_p.first],y1[cur_p.first],x2[cur_p.second],y2[cur_p.second],order_sensitive);
-	        		double new_dis = order_dist(x,y,x1[i],y1[i],x2[j],y2[j],order_sensitive);
-	        		// if (new_dis < 100) {
-	        		// 	printf("%f\n", new_dis);
-	        		// }
-	        		if (new_dis < cur_max_dis) {
-	        			min_heap.pop();
-	        			min_heap.emplace(i,j);
-	        		} else if (order_dist_part(x,y,x1[i],y1[i],x2[j],y2[j],order_sensitive) > cur_max_dis) {
-	        			continue;
-	        		}
-
-	        	}
-	        }
-
+            return dis_a > dis_b;};
+        vector<pair<int,int>>* SUBRET = new vector<pair<int,int>>[CORE_NUM];
+        thread t[CORE_NUM];
+        printf(">>>>> %d works concurrently ...\n",CORE_NUM);
+        for (i=0; i<CORE_NUM; ++i) {
+        	t[i] = thread(_solve_poi_pair,i, n1, id1, x1, y1, 
+				n2, id2, x2, y2, 
+				x, y, k, order_sensitive,
+				ref(SUBRET[i]));
         }
 
-        for (i=k-1;i>=0;--i){
+        for (i=0; i<CORE_NUM; ++i) {
+        	t[i].join();
+        }
+
+        priority_queue<pair<int, int>, vector<pair<int, int>>, decltype(comp)> min_heap(comp);
+
+        for (i=0; i<CORE_NUM; ++i) {
+        	for (auto p:SUBRET[i]) {
+        		min_heap.push(p);
+        	}
+        }
+        
+
+        for (i=0;i<k;++i){
         	pair<int,int> cur_p = min_heap.top(); min_heap.pop();
         	int a = cur_p.first;
         	int b = cur_p.second;

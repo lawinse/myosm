@@ -201,6 +201,14 @@ class NodeNameUtils:  # align to utf8
 			return x[2]-y[2] if y[1] == x[1] else (-1 if y[1]<x[1] else 1);
 		return sorted(ret,cmp)[:num];
 
+	def getNameById(self,id):
+		dbh = DBHelper();
+		raw = dbh.executeAndFetchAll("select v from current_node_tags where k like 'name%' and node_id=%s limit 1",params=(id,));
+		if len(raw) > 0:
+			return raw[0][0];
+		else:
+			return None;
+
 class WayNameUtils:  # align to utf8
 	Name2id_way = {};
 	BKTree_way = None;
@@ -284,8 +292,7 @@ class OtherUtils:
 		print ">>>>> Initalize OtherUtils ..."
 		OtherUtils.GetRelationFather(rebuild);
 		OtherUtils.GetNid2Coord(rebuild);
-		OtherUtils.GetCirclePointSolver(rebuild);
-		OtherUtils.GetPOIPairSolver(rebuild);
+		OtherUtils.BuildCutils(rebuild);
 		OtherUtils.StdlizePOIType("",rebuild);
 		print ">>>>> Done Initalization"
 	@staticmethod
@@ -308,6 +315,30 @@ class OtherUtils:
 		if OtherUtils.Poi_Mapping.has_key(poitype):
 			return OtherUtils.Poi_Mapping[poitype];
 		return None
+
+	@staticmethod
+	def BuildCutils(rebuild=False):
+		import ctypes
+		# if not os.path.exists(WORK_DIR+"circle_point.so"):
+		os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+WORK_DIR+"cUtils.cpp -o "+WORK_DIR+"cUtils.so")
+		dll = ctypes.cdll.LoadLibrary(WORK_DIR+'cUtils.so')
+		solve = dll.solve_poi_pair
+		solve.restype = ctypes.c_int;
+		solve.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double),\
+			ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), \
+			ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_bool,\
+			ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double),\
+			ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), \
+			ctypes.POINTER(ctypes.c_double)]
+		OtherUtils.POI_Pair_Solver = solve;
+
+		solve1 = dll.solve_circle_point
+		solve1.restype = ctypes.POINTER(ctypes.c_double)
+		solve1.argtypes = [ctypes.c_double,ctypes.c_int,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double),ctypes.c_bool]
+		OtherUtils.Circle_Point_Solver = solve1;
+
+
+
 	@staticmethod
 	def GetRelationFather(rebuild=False):
 		if OtherUtils.Relation_Father == None or rebuild:
@@ -330,32 +361,13 @@ class OtherUtils:
 	@staticmethod
 	def GetPOIPairSolver(rebuild=False):
 		if OtherUtils.POI_Pair_Solver == None or rebuild:
-			import ctypes
-			# if not os.path.exists(WORK_DIR+"circle_point.so"):
-			os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+WORK_DIR+"cUtils.cpp -o "+WORK_DIR+"cUtils.so")
-			dll = ctypes.cdll.LoadLibrary(WORK_DIR+'cUtils.so')
-			solve = dll.solve_poi_pair
-			solve.restype = ctypes.c_int;
-			solve.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double),\
-				ctypes.c_int, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), \
-				ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_bool,\
-				ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double),\
-				ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double), \
-				ctypes.POINTER(ctypes.c_double)]
-			OtherUtils.POI_Pair_Solver = solve;
+			OtherUtils.BuildCutils(rebuild);
 		return OtherUtils.POI_Pair_Solver;
 
 	@staticmethod
 	def GetCirclePointSolver(rebuild=False):
 		if OtherUtils.Circle_Point_Solver == None or rebuild:
-			import ctypes
-			# if not os.path.exists(WORK_DIR+"circle_point.so"):
-			os.system("g++ --std=gnu++0x -O3 -fPIC -shared "+WORK_DIR+"cUtils.cpp -o "+WORK_DIR+"cUtils.so")
-			dll = ctypes.cdll.LoadLibrary(WORK_DIR+'cUtils.so')
-			solve = dll.solve_circle_point
-			solve.restype = ctypes.POINTER(ctypes.c_double)
-			solve.argtypes = [ctypes.c_double,ctypes.c_int,ctypes.POINTER(ctypes.c_double),ctypes.POINTER(ctypes.c_double),ctypes.c_bool]
-			OtherUtils.Circle_Point_Solver = solve;
+			OtherUtils.BuildCutils(rebuild);
 		return OtherUtils.Circle_Point_Solver;
 def test_node2Line():
 	ds = DistanceUtils();
