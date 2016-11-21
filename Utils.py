@@ -200,14 +200,15 @@ class NodeNameUtils:  # align to utf8
 		def cmp(x,y):
 			return x[2]-y[2] if y[1] == x[1] else (-1 if y[1]<x[1] else 1);
 		return sorted(ret,cmp)[:num];
-
-	def getNameById(self,id):
+		
+	@classmethod
+	def GetNameById(cls,pid):
 		dbh = DBHelper();
-		raw = dbh.executeAndFetchAll("select v from current_node_tags where k like 'name%' and node_id=%s limit 1",params=(id,));
-		if len(raw) > 0:
+		raw = dbh.executeAndFetchAll("select v from current_node_tags where node_id=%s and k like %s limit 1",params=(pid,"name%"));
+		if raw != None and len(raw) > 0:
 			return raw[0][0];
 		else:
-			return None;
+			return "";
 
 class WayNameUtils:  # align to utf8
 	Name2id_way = {};

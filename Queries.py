@@ -228,7 +228,7 @@ class Queries:
 	#*   [bool]order_senstive (whether considering order), [int]candidate number
 	#* Return: poi pair order by distance
 	#* Return format: list[(poi1,poi2,[float]ttl_line_distance)]
-	#*  poi:=(node_id,coord_int)
+	#*  poi:=(node_id,name,coord_int)
 	#########################################################################################################
 	def query_pair_poitype(self,coord,poi1,poi2,order_sensitive=False,num=5):
 		Nid2Coord = OtherUtils.GetNid2Coord();
@@ -239,20 +239,7 @@ class Queries:
 		dbh = DBHelper();
 		import ctypes;
 		solve = OtherUtils.GetPOIPairSolver();
-		print ">>>>> Searching and Ordering ..."
-		# TODO: remains to be refined
-		# raw = dbh.executeAndFetchAll(\
-		# 	"select *, (st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(v2.longitude/1e7,v2.longitude/1e7))+least(st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(%s,%s)),"+\
-		# 	" st_distance(point(v2.longitude/1e7,v2.latitude/1e7),point(%s,%s))))*111195 as dis from "
-		# 	"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v=%s) as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
-		# 	"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v=%s) as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
-		# 	"order by dis limit 0,%s" if order_sensitive == False else \
-		# 	"select *,st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(v2.longitude/1e7,v2.longitude/1e7))+st_distance(point(v1.longitude/1e7,v1.latitude/1e7),point(%s,%s))*111195 as dis from "
-		# 	"(select p1.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v=%s) as p1 left join current_nodes on p1.node_id=current_nodes.id) as v1, "+\
-		# 	"(select p2.node_id,current_nodes.latitude,current_nodes.longitude from (select distinct node_id from current_node_tags where k='poitype' and v=%s) as p2 left join current_nodes on p2.node_id=current_nodes.id) as v2 "+\
-		# 	"order by dis limit 0,%s",\
-		# 	params = (coord[1],coord[0],coord[1],coord[0],poi1,poi2,num,) if order_sensitive == False else (coord[1],coord[0],poi1,poi2,num)) 
-		# ret = [((tp[0],[tp[1],tp[2]]), (tp[3],[tp[4],tp[5]]), tp[6])for tp in raw]
+		print ">>>>> Searching ..."
 
 		nodelist1 = dbh.executeAndFetchAll("select id,latitude/1e7,longitude/1e7 from current_nodes where id in "+\
 			"(select distinct node_id from current_node_tags where k='poitype' and v=%s) order by st_distance(point(longitude/1e7,latitude/1e7),point(%s,%s))",\
@@ -261,7 +248,8 @@ class Queries:
 			"(select distinct node_id from current_node_tags where k='poitype' and v=%s) order by st_distance(point(longitude/1e7,latitude/1e7),point(%s,%s))",\
 			params = (poi2,coord[1],coord[0]))
 
-		
+
+		print ">>>>> Ordering ..."
 		n1 = len(nodelist1);
 		atype1_int = ctypes.c_int*n1;
 		atype1_double = ctypes.c_double*n1;
@@ -294,8 +282,9 @@ class Queries:
 				id1ret,x1ret,y1ret,\
 				id2ret,x2ret,y2ret,\
 				disret);
-		ret = [((id1ret[i],[int(x1ret[i]*DistanceUtils.coord_scale),int(y1ret[i]*DistanceUtils.coord_scale)]),\
-			(id2ret[i],[int(x2ret[i]*DistanceUtils.coord_scale),int(y2ret[i]*DistanceUtils.coord_scale)]),disret[i])for i in range(k)]
+
+		ret = [((id1ret[i],NodeNameUtils.GetNameById(id1ret[i]),[int(x1ret[i]*DistanceUtils.coord_scale),int(y1ret[i]*DistanceUtils.coord_scale)]),\
+			(id2ret[i],NodeNameUtils.GetNameById(id2ret[i]),[int(x2ret[i]*DistanceUtils.coord_scale),int(y2ret[i]*DistanceUtils.coord_scale)]),disret[i])for i in range(k)]
 
 
 
@@ -422,7 +411,7 @@ if __name__ == '__main__':
 	# print myQuery.query2(way_name="杨高中路".decode('utf8'));
 	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
-	print myQuery.query_pair_poitype([31.025403,121.431028],"风景区".decode('utf8'),"美食".decode('utf8'),order_sensitive=False)
+	print myQuery.query_pair_poitype([31.025403,121.431028],"住宅区".decode('utf8'),"美食".decode('utf8'),order_sensitive=False)
 	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
 	# while 1:
 	# 	a = raw_input();
