@@ -6,12 +6,16 @@ from MapConverter import MapConverter
 
 class Queries:
 	def __init__(self):
+		self.mc = MapConverter();
 		if not LAZY_START:
 			DistanceUtils.Build();
 			NodeNameUtils.Build();
 			WayNameUtils.Build();
 			Routing.Build();
 			OtherUtils.Build();
+
+	def getMapConverter(self):
+		return self.mc;
 
 	#########################################################################################################
 	#* Desc: Given a node and find all the ways containing it and whether it is a intersection
@@ -44,10 +48,10 @@ class Queries:
 		isIntersection = len(result) > 1;
 		way_list = [tp[0] for tp in result];
 
-		mc = MapConverter();
-		mc.add_root_point_byid(tid);
-		if len(way_list) > 0: mc.set_target_lines_byid(way_list);
-		mc.convert();
+		self.mc.clear();
+		self.mc.add_root_point_byid(tid);
+		if len(way_list) > 0: self.mc.set_target_lines_byid(way_list);
+		self.mc.convert();
 
 		return (tid, way_list, isIntersection)
 
@@ -68,17 +72,17 @@ class Queries:
 			return None;
 		dbh = DBHelper();
 		ret = [];
-		mc = MapConverter();
+		self.mc.clear();
 		for wid in wid_list:
 			result = dbh.executeAndFetchAll("select node_id,sequence_id from current_way_nodes where id=%s order by sequence_id",params=(wid,));
 			node_list = [tp[0] for tp in result];
 			Nid2Coord = OtherUtils.GetNid2Coord();
 			node_list = [(nid, Nid2Coord[nid]) for nid in node_list];
-			mc.add_target_point_byid(nid);
-			mc.add_target_line([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in node_list]);
+			self.mc.add_target_point_byid(nid);
+			self.mc.add_target_line([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in node_list]);
 			ret.append(node_list);
 		if not no_graph: 
-			mc.convert();
+			self.mc.convert();
 
 		return ret;
 
@@ -122,18 +126,18 @@ class Queries:
 		poitype = OtherUtils.StdlizePOIType(poitype);
 		Nid2Coord = OtherUtils.GetNid2Coord();
 		dbh = DBHelper();
-		mc = MapConverter();
-		mc.add_root_point(tuple(coord));
-		mc.set_target_range(coord,DistanceUtils.degree_distance(radius));
+		self.mc.clear();
+		self.mc.add_root_point(tuple(coord));
+		self.mc.set_target_range(coord,DistanceUtils.degree_distance(radius));
 
 		raw = dbh.executeAndFetchAll("select id, latitude, longitude, st_distance(point(longitude/1e7, latitude/1e7),point(%s,%s))*111195 as dis "+\
 			"from current_nodes where (id in "+\
 			"(select distinct node_id from current_node_tags where k='poitype' and v=%s)) having dis<%s"+ \
 			" order by dis", params=(coord[1],coord[0],poitype,radius,));
 		result = [(tp[0], tp[3], [tp[1],tp[2]])for tp in raw]
-		mc.set_target_points([tuple([item/DistanceUtils.coord_scale for item in tp[2]]) for tp in result])
-		mc.downsampling_target_points(num=5000);
-		mc.convert();
+		self.mc.set_target_points([tuple([item/DistanceUtils.coord_scale for item in tp[2]]) for tp in result])
+		self.mc.downsampling_target_points(num=5000);
+		self.mc.convert();
 		# candidates_nids = [tp[0] for tp in raw];
 		# result = []
 		# for nid in candidates_nids:
@@ -155,8 +159,8 @@ class Queries:
 		du = DistanceUtils();
 		raw = du.queryNN(pointlist = np.array([coord_int]), k_nn=k1);
 		dbh = DBHelper();
-		mc = MapConverter();
-		mc.add_target_point(tuple(coord));
+		self.mc.clear();
+		self.mc.add_target_point(tuple(coord));
 		wayid_middleSeq = {}
 		Nid2Coord = OtherUtils.GetNid2Coord();
 
@@ -182,11 +186,11 @@ class Queries:
 			if (tmp_dis < minDis):
 				minDis = tmp_dis
 				minDis_wid = way_id;
-		mc.add_target_line_byid(minDis_wid);
+		self.mc.add_target_line_byid(minDis_wid);
 		li = wayid_middleSeq.keys()[:];
 		li.remove(minDis_wid)
-		mc.set_background_lines_byid(li);
-		mc.convert();
+		self.mc.set_background_lines_byid(li);
+		self.mc.convert();
 		return (minDis_wid,minDis,self.query2(way_id=minDis_wid,no_graph=True));
 
 	#########################################################################################################
@@ -213,13 +217,13 @@ class Queries:
 		from Routing import Routing
 		ro = Routing(routeType);
 		ret = ro.findRoute(start_coord,end_coord)
-		mc = MapConverter();
+		self.mc.clear();
 		if ret[0] == 'success':
-			mc.add_root_point(tuple(start_coord));
-			mc.add_root_point(tuple(end_coord));
-			mc.add_target_line([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in ret[2]])
+			self.mc.add_root_point(tuple(start_coord));
+			self.mc.add_root_point(tuple(end_coord));
+			self.mc.add_target_line([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in ret[2]])
 
-		mc.convert();
+		self.mc.convert();
 		return ret;
 
 	#########################################################################################################
@@ -234,8 +238,8 @@ class Queries:
 		Nid2Coord = OtherUtils.GetNid2Coord();
 		poi1 = OtherUtils.StdlizePOIType(poi1);
 		poi2 = OtherUtils.StdlizePOIType(poi2);
-		mc = MapConverter();
-		mc.add_root_point(tuple(coord));
+		self.mc.clear();
+		self.mc.add_root_point(tuple(coord));
 		dbh = DBHelper();
 		import ctypes;
 		solve = OtherUtils.GetPOIPairSolver();
@@ -289,8 +293,8 @@ class Queries:
 
 
 		for tp in ret:
-			mc.add_target_pair_points_byid(tp[0][0],tp[1][0]);
-		mc.convert();
+			self.mc.add_target_pair_points_byid(tp[0][0],tp[1][0]);
+		self.mc.convert();
 		return ret
 
 	#########################################################################################################
@@ -302,7 +306,7 @@ class Queries:
 	def query_most_poi_within_radius(self, poitype,radius,need_precise = False):
 		import ctypes
 		poitype = OtherUtils.StdlizePOIType(poitype)
-		mc = MapConverter();
+		self.mc.clear();
 
 		solve = OtherUtils.GetCirclePointSolver();
 
@@ -316,9 +320,9 @@ class Queries:
 		print ">>>>> Searching ..."
 		res = solve(radius,num_numbers,array_type(*x),array_type(*y),need_precise)
 		count = int(res[0])
-		mc.add_root_point((res[1],res[2]));
-		mc.set_target_range((res[1],res[2]),DistanceUtils.degree_distance(radius));
-		mc.convert();
+		self.mc.add_root_point((res[1],res[2]));
+		self.mc.set_target_range((res[1],res[2]),DistanceUtils.degree_distance(radius));
+		self.mc.convert();
 		return ([int(res[1]*DistanceUtils.coord_scale),int(res[2]*DistanceUtils.coord_scale)],count)
 
 	#########################################################################################################
@@ -331,9 +335,9 @@ class Queries:
 	def query_middle_poi(self,coord1,coord2,poitype,sum_tolerate=0.2,diff_tolerate=0.1,order_sensitive = False,num=2):
 		poitype = OtherUtils.StdlizePOIType(poitype);
 		line_dis_max = DistanceUtils.spherical_distance(coord1,coord2)*(1+sum_tolerate);
-		mc = MapConverter();
-		mc.add_root_point(tuple(coord1));
-		mc.add_root_point(tuple(coord2));
+		self.mc.clear();
+		self.mc.add_root_point(tuple(coord1));
+		self.mc.add_root_point(tuple(coord2));
 		dbh = DBHelper();
 
 		print ">>>>> Searching ..."
@@ -348,8 +352,8 @@ class Queries:
 			params=(coord1[1],coord1[0],coord2[1],coord2[0],poitype,line_dis_max,diff_tolerate,\
 				0.5*(coord2[1]+coord1[1]),0.5*(coord2[0]+coord1[0]),num,));
 		ret = [(tp[0],[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
-		mc.set_target_points_byid([tp[0] for tp in ret])
-		mc.convert();
+		self.mc.set_target_points_byid([tp[0] for tp in ret])
+		self.mc.convert();
 		return ret;
 
 	#########################################################################################################
@@ -360,15 +364,15 @@ class Queries:
 	#########################################################################################################
 	def query_poi_node_name_nearby(self,coord,poi_name,num=10):
 		nu = NodeNameUtils();
-		mc = MapConverter();
-		mc.add_root_point(tuple(coord));
+		self.mc.clear();
+		self.mc.add_root_point(tuple(coord));
 		print ">>>>> Searching ..."
 		node_list = nu.findIsA(poi_name)
 		coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
 		node_list = [(tp[0],tp[1],tp[2],DistanceUtils.spherical_distance(coord_int,tp[1])) for tp in node_list]
 		ret = sorted(node_list,key=lambda node:node[3])[:num];
-		mc.set_target_points_byid([tp[0] for tp in ret]);
-		mc.convert();
+		self.mc.set_target_points_byid([tp[0] for tp in ret]);
+		self.mc.convert();
 		return ret
 
 	#########################################################################################################
@@ -391,10 +395,10 @@ class Queries:
 	#* Return: None
 	#########################################################################################################
 	def query_region_graph(self,coord,minLat,maxLat,minLon,maxLon):
-		mc = MapConverter();
-		mc.add_root_point(tuple(coord));
-		mc.set_target_bounder((minLat, minLon, maxLat, maxLon));
-		mc.convert();
+		self.mc.clear();
+		self.mc.add_root_point(tuple(coord));
+		self.mc.set_target_bounder((minLat, minLon, maxLat, maxLon));
+		self.mc.convert();
 		return;
 
 

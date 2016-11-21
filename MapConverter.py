@@ -10,13 +10,7 @@ import gc
 # This Converter would be used by visualization
 class MapConverter:
 	def __init__(self):
-		self.__root_points = [] #root_points[i] = (lat1, lon1)
-		self.__target_points = [] #target_points[i] = (lat1, lon1)
-		self.__target_lines = [] # target_lines[i] = [(lat1,lon1)...(latn,lonn)]
-		self.__background_lines = [] # background_lines[i] = [(lat1,lon1)...(latn,lonn)]
-		self.__target_bounder = tuple() #(minLat, minLon, maxLat, maxLon)
-		self.__target_range = tuple() # ((lat,lon),radius)
-		self.__dbh = DBHelper();
+		self.clear();
 
 	def __del__(self):
 		self.__root_points = None;
@@ -25,7 +19,18 @@ class MapConverter:
 		self.__target_bounder = None
 		self.__target_range = None
 		self.__background_lines = None
+		self.__url = None;
 		gc.collect()
+
+	def clear(self):
+		self.__root_points = [] #root_points[i] = (lat1, lon1)
+		self.__target_points = [] #target_points[i] = (lat1, lon1)
+		self.__target_lines = [] # target_lines[i] = [(lat1,lon1)...(latn,lonn)]
+		self.__background_lines = [] # background_lines[i] = [(lat1,lon1)...(latn,lonn)]
+		self.__target_bounder = tuple() #(minLat, minLon, maxLat, maxLon)
+		self.__target_range = tuple() # ((lat,lon),radius)
+		self.__dbh = DBHelper();
+		self.__url = ""
 
 	def load(self,filename): #(__target_points,__root_points,__target_lines,__background_lines,__target_bounder,__target_range)
 		(self.__target_points,\
@@ -122,6 +127,12 @@ class MapConverter:
 					maxLat = max(point[0],maxLat);
 					minLon = min(point[1],minLon);
 					maxLon = max(point[1],maxLon);
+			if self.__target_range != None and len(self.__target_range) > 0:
+				(lat,lon),radius = self.__target_range;
+				minLat = min(minLat,lat-radius);
+				maxLat = max(maxLat,lat+radius);
+				minLon = min(minLon,lon-radius);
+				maxLon = max(maxLon,lon+radius);
 
 			latDiff = maxLat-minLat;
 			lonDiff = maxLon-minLon;
@@ -201,9 +212,15 @@ class MapConverter:
 		print "#target_lines: %d" % sum([len(line)-1 for line in self.get_target_lines()]);
 		print "###################\n"
 
+	def get_url(self):
+		return self.__url;
+
+	def set_url(self,url):
+		self.__url = url
 
 	def convert(self):
 		MapConverter.DoConvert(self);
+
 	@staticmethod
 	def DoConvert(mpcnvtr):
 		#TODO
