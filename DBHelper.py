@@ -100,7 +100,7 @@ class DBHelper:
 
 if __name__ == '__main__':
 	dbh = DBHelper();
-	print len(dbh.executeAndFetchAll("select * from current_nodes where isd=-1"))
+	print len(dbh.executeAndFetchAll("select * from current_nodes where id=-1"))
 	dbh.commit();
 	# for i in range(100):
 	# 	dbh.executeAndFetchAll("select * from current_nodes where id=%s",params=(26609107+i,));

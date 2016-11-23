@@ -227,13 +227,14 @@ class OsmGenerator:
 						start_relations.append(fa);
 						start_visit.add(fa);
 						relation_child2father.append((tmp,fa));
+		
+		dbh.execute("drop table if exists new_relation_fathers_"+self.Timestamp,need_commit=True);
+		sql = \
+		"create table new_relation_fathers_"+self.Timestamp+" ("+\
+		"relation_id bigint(64) NOT NULL ,"+\
+		"father_id bigint(64) NOT NULL)"
+		dbh.execute(sql,need_commit=True);
 		if len(relation_child2father)>0:
-			dbh.execute("drop table if exists new_relation_fathers_"+self.Timestamp,need_commit=True);
-			sql = \
-			"create table new_relation_fathers_"+self.Timestamp+" ("+\
-			"relation_id bigint(64) NOT NULL ,"+\
-			"father_id bigint(64) NOT NULL)"
-			dbh.execute(sql,need_commit=True);
 			values = ""
 			for pair in relation_child2father:
 				values += ("(%d,%d)"%(int(pair[0]),int(pair[1]))) +","
@@ -307,13 +308,13 @@ class OsmGenerator:
 
 
 if __name__ == '__main__':
-	gen = OsmGenerator('a.osm',minLat=30.0040639, maxLat=30.9263716, minLon=118.6901586, maxLon=120.7920180)
+	gen = OsmGenerator('a.osm',minLat=31.025403, maxLat=31.025413, minLon=121.431028, maxLon=121.431038)
 	gen.process();
 	gen.commit();
-	gen = OsmGenerator('a.osm',minLat=30.0040639, maxLat=30.9263716, minLon=118.6901586, maxLon=120.7920180)
-	gen.process();
-	gen.commit();
-	gen = OsmGenerator('a.osm',minLat=30.0040639, maxLat=30.9263716, minLon=118.6901586, maxLon=120.7920180)
-	gen.process();
-	gen.commit();
+	# gen = OsmGenerator('a.osm',minLat=30.0040639, maxLat=30.9263716, minLon=118.6901586, maxLon=120.7920180)
+	# gen.process();
+	# gen.commit();
+	# gen = OsmGenerator('a.osm',minLat=30.0040639, maxLat=30.9263716, minLon=118.6901586, maxLon=120.7920180)
+	# gen.process();
+	# gen.commit();
 	

@@ -200,7 +200,7 @@ class NodeNameUtils:  # align to utf8
 		def cmp(x,y):
 			return x[2]-y[2] if y[1] == x[1] else (-1 if y[1]<x[1] else 1);
 		return sorted(ret,cmp)[:num];
-		
+
 	@classmethod
 	def GetNameById(cls,pid):
 		dbh = DBHelper();
@@ -279,6 +279,15 @@ class WayNameUtils:  # align to utf8
 		def cmp(x,y):
 			return x[2]-y[2] if y[1] == x[1] else (-1 if y[1]<x[1] else 1);
 		return sorted(ret,cmp)[:num];
+
+	@classmethod
+	def GetNameById(cls,wid):
+		dbh = DBHelper();
+		raw = dbh.executeAndFetchAll("select v from current_way_tags where node_id=%s and k like %s limit 1",params=(wid,"name%"));
+		if raw != None and len(raw) > 0:
+			return raw[0][0];
+		else:
+			return "";
 
 
 

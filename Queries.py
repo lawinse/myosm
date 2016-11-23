@@ -21,7 +21,8 @@ class Queries:
 	#* Desc: Given a node and find all the ways containing it and whether it is a intersection
 	#* Input: [int]node_id (useless) or [list(float,2)]coord or [string]node_name (the name of target_node)
 	#* Return: node_id, all the way_id, whether it is a intersection
-	#* Return format: tuple ( [int]node_id, [list]list of way_id, [bool]whether it is ai intersection
+	#* Return format: tuple ( [int]node_id, name, [list]list of way, [bool]whether it is ai intersection
+	#*  way := (way_id, way_name)
 	#########################################################################################################
 	def query1(self, node_id=None,coord=None,node_name=None):  # type(coord)=list 
 		tid = -1;
@@ -51,9 +52,10 @@ class Queries:
 		self.mc.clear();
 		self.mc.add_root_point_byid(tid);
 		if len(way_list) > 0: self.mc.set_target_lines_byid(way_list);
+		way_list = [(wid, WayNameUtils.GetNameById(wid)) for wid in way_list];
 		self.mc.convert();
 
-		return (tid, way_list, isIntersection)
+		return (tid, NodeNameUtils.GetNameById(tid) ,way_list, isIntersection)
 
 	#########################################################################################################
 	#* Desc: Given a way and find all the nodes along it
@@ -149,7 +151,7 @@ class Queries:
 	#* Desc: Find the nearest way of given coord
 	#* Input: [list(float,2)] coord
 	#* Return: the way with least distance and its inforamtion
-	#* Return format: tuple(way_id, [float] min_dis, query2(way_id))
+	#* Return format: tuple(way_id, [float] min_dis, way_name, query2(way_id))
 	#########################################################################################################
 	def query5(self, coord, k1=8, k2=5):
 		# k1 means the number of neigh we filter out; 
@@ -191,7 +193,7 @@ class Queries:
 		li.remove(minDis_wid)
 		self.mc.set_background_lines_byid(li);
 		self.mc.convert();
-		return (minDis_wid,minDis,self.query2(way_id=minDis_wid,no_graph=True));
+		return (minDis_wid,minDis,WayNameUtils.GetNameById(minDis_wid),self.query2(way_id=minDis_wid,no_graph=True));
 
 	#########################################################################################################
 	#* Desc: Generate new osm with given range of lat and lon
@@ -330,7 +332,7 @@ class Queries:
 	#* Input: [list(float,2)]coord1，coord2, [stirng] poitype, [float] sum_tolerate,diff_tolerate,
 	#*   [bool] is order sensitive, [int] candidate num
 	#* Return: the candidates ordered by ttl_distance
-	#* Return format: list(tuple(node_id,coord_int,[float]distance1,[float]distance2))
+	#* Return format: list(tuple(node_id,name,coord_int,[float]distance1,[float]distance2))
 	#########################################################################################################
 	def query_middle_poi(self,coord1,coord2,poitype,sum_tolerate=0.2,diff_tolerate=0.1,order_sensitive = False,num=2):
 		poitype = OtherUtils.StdlizePOIType(poitype);
@@ -351,7 +353,7 @@ class Queries:
 			"order by st_distance(point(a.longitude/1e7,a.latitude/1e7),point(%s,%s)) limit 0,%s",\
 			params=(coord1[1],coord1[0],coord2[1],coord2[0],poitype,line_dis_max,diff_tolerate,\
 				0.5*(coord2[1]+coord1[1]),0.5*(coord2[0]+coord1[0]),num,));
-		ret = [(tp[0],[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
+		ret = [(tp[0],NodeNameUtils.GetNameById(tp[0])[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
 		self.mc.set_target_points_byid([tp[0] for tp in ret])
 		self.mc.convert();
 		return ret;
