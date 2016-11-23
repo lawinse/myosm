@@ -383,7 +383,7 @@ class Queries:
 	#* Return: the changeset id list, -1 denotes a rollback
 	#* Return format: list(int)
 	#########################################################################################################
-	def query_changesets(self, fiilenames=None):
+	def query_changesets(self, filenames=None):
 		from ChangeSetUtils import ChangeSetTask
 		task = ChangeSetTask();
 		for f in filenames:
