@@ -2,6 +2,7 @@
 import shapefile
 import mapnik
 from Config import *
+from PIL import Image
 
 class Graph:
     NodeShell = shapefile.Writer(shapefile.POINT)
@@ -26,7 +27,7 @@ class Graph:
     '''nodes_coord = [[coord1_x,coord1_y],[coord2_x,coord2_y]]'''
     def add_background_points(self, nodes_coord = None, nodes_id = None, nodes_add = WORK_DIR+'fig/background_points.shp'):
         if len(nodes_coord) == 0: return;
-        for l1 in range(len(nodes_coord)):
+        for l1 in xrange(len(nodes_coord)):
             Graph.PathPoint.point(nodes_coord[l1][1],nodes_coord[l1][0])  # no elevation value or measure value
 
         self.OutputFormat = self.OutputFormat+'\n'+self.DefaultFormat.replace('XXX','background_points')
@@ -35,7 +36,7 @@ class Graph:
     '''add target nodes'''
     def add_target_points(self, nodes_coord = None, nodes_id = None, nodes_add = WORK_DIR+'fig/target_points.shp'):
         if len(nodes_coord) == 0: return;
-        for l1 in range(len(nodes_coord)):
+        for l1 in xrange(len(nodes_coord)):
             Graph.PathPoint.point(nodes_coord[l1][1],nodes_coord[l1][0])  # no elevation value or measure value
 
         self.OutputFormat = self.OutputFormat+'\n'+self.DefaultFormat.replace('XXX','target_points')
@@ -44,7 +45,7 @@ class Graph:
     '''add root nodes'''
     def add_root_points(self, nodes_coord = None, nodes_id = None, nodes_add = WORK_DIR+'fig/root_points.shp'):
         if len(nodes_coord) == 0: return;
-        for l1 in range(len(nodes_coord)):
+        for l1 in xrange(len(nodes_coord)):
             Graph.PathPoint.point(nodes_coord[l1][1],nodes_coord[l1][0])  # no elevation value or measure value
 
         self.OutputFormat = self.OutputFormat+'\n'+self.DefaultFormat.replace('XXX','root_points')
@@ -53,7 +54,7 @@ class Graph:
     '''add the neighbor points'''
     def add_nnode(self, nodes_coord = None, nodes_id = None, nodes_add = WORK_DIR+'fig/neigh_nodes.shp'):
         if len(nodes_coord) == 0: return;
-        for l1 in range(len(nodes_coord)):
+        for l1 in xrange(len(nodes_coord)):
             Graph.PathPoint.point(nodes_coord[l1][1],nodes_coord[l1][0])  # no elevation value or measure value
 
         self.OutputFormat = self.OutputFormat+'\n'+self.DefaultFormat.replace('XXX','neigh_nodes')
@@ -93,17 +94,20 @@ class Graph:
             return None
         pass
 
-    def xml_render(self,file_name):
+    def xml_render(self,file_name,out_size=(1920,1080)):
         OutputFile = open(WORK_DIR+'fig/mystyle.xml','w')
         OutputFile.write(self.OutputFormat+'\n</Map>')
         OutputFile.close()
 
         stylesheet = WORK_DIR+'fig/mystyle.xml'
         image = WORK_DIR+file_name
-        graph = mapnik.Map(1920, 1080)
+        graph = mapnik.Map(15000, 8436)  # 16:9
         mapnik.load_map(graph, stylesheet)
         graph.zoom_all()
-        mapnik.render_to_file(graph, image)
+        mapnik.render_to_file(graph, image, 'png8:z=9:e=miniz')
+        im = Image.open(image);
+        rsz = im.resize(out_size,Image.ANTIALIAS);
+        rsz.save(image)
         
         print "rendered image to '%s'" % image
 
@@ -140,7 +144,7 @@ class Graph:
         layer = ['point','point','line','point']
         address = [item for item in shp_address]
 
-        for l1 in range(len(address)):
+        for l1 in xrange(len(address)):
             ds = mapnik.Shapefile(file = address[l1])
             lay = mapnik.Layer(layer[l1])
             lay.datasource = ds

@@ -183,8 +183,8 @@ class MapConverter:
 
 	def get_background_points(self,num=None,ratio=1.0):
 		(minLat, minLon, maxLat, maxLon) = self.get_target_bounder();
-		bgp = self.__dbh.executeAndFetchAll("select latitude/1e7, longitude/1e7 from current_nodes inner join"+\
-			" (select distinct node_id from current_node_tags) as a on current_nodes.id=a.node_id "+\
+		bgp = self.__dbh.executeAndFetchAll("select latitude/1e7, longitude/1e7 from current_nodes "+\
+			" right join (select distinct node_id from current_node_tags) as a on current_nodes.id=a.node_id "+\
 			"where (latitude/1e7 between %s and %s) and (longitude/1e7 between %s and %s)",\
 			params = (minLat,maxLat,minLon,maxLon));
 		sample_n = 0;
@@ -259,11 +259,11 @@ class MapConverter:
 		mg.add_root_points(self.get_root_points());
 		mg.add_target_lines(self.get_target_lines()); 
 
-		mg.add_background_points(self.get_background_points(num=20000,ratio=0.65))
+		mg.add_background_points(self.get_background_points(num=20000,ratio=0.7))
 		mg.add_background_lines(self.get_background_lines());
-		if not os.path.exist(directory):
+		if not os.path.exists(directory):
 			os.mkdir(directory);
-		fname = directory+qname+str(hash(datetime.datetime.now()))+'.png';
+		fname = directory+qname+"@"+str(hash(datetime.datetime.now()))+'.png';
 		mg.xml_render(fname);
 		self.set_url(fname)
 
