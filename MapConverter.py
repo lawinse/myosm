@@ -259,7 +259,7 @@ class MapConverter:
 		mg.add_root_points(self.get_root_points());
 		mg.add_target_lines(self.get_target_lines()); 
 
-		mg.add_background_points(self.get_background_points(num=20000,ratio=0.7))
+		mg.add_background_points(self.get_background_points(num=10000,ratio=0.7))
 		mg.add_background_lines(self.get_background_lines());
 		if not os.path.exists(directory):
 			os.mkdir(directory);

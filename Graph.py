@@ -101,10 +101,10 @@ class Graph:
 
         stylesheet = WORK_DIR+'fig/mystyle.xml'
         image = WORK_DIR+file_name
-        graph = mapnik.Map(15000, 8436)  # 16:9
+        graph = mapnik.Map(10000, 5625)  # 16:9
         mapnik.load_map(graph, stylesheet)
         graph.zoom_all()
-        mapnik.render_to_file(graph, image, 'png8:z=9:e=miniz')
+        mapnik.render_to_file(graph, image, 'png8:z=1:e=miniz')
         im = Image.open(image);
         rsz = im.resize(out_size,Image.ANTIALIAS);
         rsz.save(image)

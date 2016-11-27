@@ -139,7 +139,7 @@ class Queries:
 			" order by dis", params=(coord[1],coord[0],poitype,radius,));
 		result = [(tp[0], tp[3], [tp[1],tp[2]])for tp in raw]
 		self.mc.set_target_points([tuple([item/DistanceUtils.coord_scale for item in tp[2]]) for tp in result])
-		self.mc.downsampling_target_points(num=5000);
+		self.mc.downsampling_target_points(num=500);
 		self.mc.convert(qname=sys._getframe().f_code.co_name);
 		# candidates_nids = [tp[0] for tp in raw];
 		# result = []
@@ -324,8 +324,17 @@ class Queries:
 		print ">>>>> Searching ..."
 		res = solve(radius,num_numbers,array_type(*x),array_type(*y),need_precise)
 		count = int(res[0])
-		self.mc.add_root_point((res[1],res[2]));
-		self.mc.set_target_range((res[1],res[2]),DistanceUtils.degree_distance(radius));
+		coord = [res[1],res[2]]
+		self.mc.add_root_point(tuple(coord));
+		self.mc.set_target_range(coord,DistanceUtils.degree_distance(radius));
+
+		raw = dbh.executeAndFetchAll("select id, latitude, longitude, st_distance(point(longitude/1e7, latitude/1e7),point(%s,%s))*111195 as dis "+\
+			"from current_nodes where (id in "+\
+			"(select distinct node_id from current_node_tags where k='poitype' and v=%s)) having dis<%s"+ \
+			" order by dis", params=(coord[1],coord[0],poitype,radius,));
+		result = [(tp[0], tp[3], [tp[1],tp[2]])for tp in raw]
+		self.mc.set_target_points([tuple([item/DistanceUtils.coord_scale for item in tp[2]]) for tp in result])
+		self.mc.downsampling_target_points(num=500);
 		self.mc.convert(qname=sys._getframe().f_code.co_name);
 		return ([int(res[1]*DistanceUtils.coord_scale),int(res[2]*DistanceUtils.coord_scale)],count)
 
@@ -413,16 +422,16 @@ class Queries:
 if __name__ == '__main__':
 	myQuery = Queries();
 	# print myQuery.query1(node_name="人民广场".decode('utf8'))
-	# print myQuery.query5(coord=[31.11652,121.391634])
-	print myQuery.query_routing("car",[31.257391,121.483045],[31.11652,121.391634]);
+	# print myQuery.query5(coord=[31.257391,121.483045])
+	# print myQuery.query_routing("car",[31.257391,121.483045],[31.11652,121.391634]);
 	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
 	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"大型购物".decode('utf8'))
-	# print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
-	# print myQuery.query2(way_name="东川路".decode('utf8'));
-	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
+	# print myQuery.query_most_poi_within_radius("".decode('utf8'),10000)
+	print myQuery.query2(way_name="莲花南路".decode('utf8'));
+	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),10000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
 	# print myQuery.query_pair_poitype([31.025403,121.431028],"住宅区".decode('utf8'),"美食".decode('utf8'),order_sensitive=False,num=30)
-	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
+	# print myQuery.query4("美食".decode('utf8'),[31.1977664,121.4147976],10000)
 	# while 1:
 	# 	a = raw_input();
 	# 	print myQuery.query5(coord=eval(a))
