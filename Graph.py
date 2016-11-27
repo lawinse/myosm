@@ -100,7 +100,7 @@ class Graph:
         OutputFile.close()
 
         stylesheet = WORK_DIR+'fig/mystyle.xml'
-        image = WORK_DIR+file_name
+        image = file_name
         graph = mapnik.Map(10000, 5625)  # 16:9
         mapnik.load_map(graph, stylesheet)
         graph.zoom_all()

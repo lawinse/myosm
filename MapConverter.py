@@ -251,7 +251,7 @@ class MapConverter:
 	def set_url(self,url):
 		self.__url = url
 
-	def convert(self,directory=WORK_DIR,qname=""):
+	def convert(self,directory=DRAW_DIR,qname=""):
 		print ">>>>> Converting to graph ..."
 		self.report();
 		mg = Graph()
