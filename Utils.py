@@ -283,7 +283,7 @@ class WayNameUtils:  # align to utf8
 	@classmethod
 	def GetNameById(cls,wid):
 		dbh = DBHelper();
-		raw = dbh.executeAndFetchAll("select v from current_way_tags where node_id=%s and k like %s limit 1",params=(wid,"name%"));
+		raw = dbh.executeAndFetchAll("select v from current_way_tags where way_id=%s and k like %s limit 1",params=(wid,"name%"));
 		if raw != None and len(raw) > 0:
 			return raw[0][0];
 		else:

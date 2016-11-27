@@ -53,7 +53,7 @@ class Queries:
 		self.mc.add_root_point_byid(tid);
 		if len(way_list) > 0: self.mc.set_target_lines_byid(way_list);
 		way_list = [(wid, WayNameUtils.GetNameById(wid)) for wid in way_list];
-		self.mc.convert();
+		self.mc.convert(qname=sys._getframe().f_code.co_name);
 
 		return (tid, NodeNameUtils.GetNameById(tid) ,way_list, isIntersection)
 
@@ -84,7 +84,8 @@ class Queries:
 			self.mc.add_target_line([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in node_list]);
 			ret.append(node_list);
 		if not no_graph: 
-			self.mc.convert();
+			self.mc.convert(qname=sys._getframe().f_code.co_name);
+
 
 		return ret;
 
@@ -139,7 +140,7 @@ class Queries:
 		result = [(tp[0], tp[3], [tp[1],tp[2]])for tp in raw]
 		self.mc.set_target_points([tuple([item/DistanceUtils.coord_scale for item in tp[2]]) for tp in result])
 		self.mc.downsampling_target_points(num=5000);
-		self.mc.convert();
+		self.mc.convert(qname=sys._getframe().f_code.co_name);
 		# candidates_nids = [tp[0] for tp in raw];
 		# result = []
 		# for nid in candidates_nids:
@@ -153,7 +154,7 @@ class Queries:
 	#* Return: the way with least distance and its inforamtion
 	#* Return format: tuple(way_id, [float] min_dis, way_name, query2(way_id))
 	#########################################################################################################
-	def query5(self, coord, k1=8, k2=5):
+	def query5(self, coord, k1=15, k2=8):
 		# k1 means the number of neigh we filter out; 
 		# k2 indicates the number of nodes along the way to calc distance
 		coord_int = [int(item*DistanceUtils.coord_scale) for item in coord];
@@ -192,7 +193,7 @@ class Queries:
 		li = wayid_middleSeq.keys()[:];
 		li.remove(minDis_wid)
 		self.mc.set_background_lines_byid(li);
-		self.mc.convert();
+		self.mc.convert(qname=sys._getframe().f_code.co_name);
 		return (minDis_wid,minDis,WayNameUtils.GetNameById(minDis_wid),self.query2(way_id=minDis_wid,no_graph=True));
 
 	#########################################################################################################
@@ -225,7 +226,8 @@ class Queries:
 			self.mc.add_root_point(tuple(end_coord));
 			self.mc.add_target_line([(nd[1][0]/DistanceUtils.coord_scale,nd[1][1]/DistanceUtils.coord_scale) for nd in ret[2]])
 
-		self.mc.convert();
+		self.mc.convert(qname=sys._getframe().f_code.co_name);
+		# self.mc.save(WORK_DIR+"MapConverter.dump")
 		return ret;
 
 	#########################################################################################################
@@ -296,7 +298,7 @@ class Queries:
 
 		for tp in ret:
 			self.mc.add_target_pair_points_byid(tp[0][0],tp[1][0]);
-		self.mc.convert();
+		self.mc.convert(qname=sys._getframe().f_code.co_name);
 		return ret
 
 	#########################################################################################################
@@ -324,7 +326,7 @@ class Queries:
 		count = int(res[0])
 		self.mc.add_root_point((res[1],res[2]));
 		self.mc.set_target_range((res[1],res[2]),DistanceUtils.degree_distance(radius));
-		self.mc.convert();
+		self.mc.convert(qname=sys._getframe().f_code.co_name);
 		return ([int(res[1]*DistanceUtils.coord_scale),int(res[2]*DistanceUtils.coord_scale)],count)
 
 	#########################################################################################################
@@ -334,7 +336,7 @@ class Queries:
 	#* Return: the candidates ordered by ttl_distance
 	#* Return format: list(tuple(node_id,name,coord_int,[float]distance1,[float]distance2))
 	#########################################################################################################
-	def query_middle_poi(self,coord1,coord2,poitype,sum_tolerate=0.2,diff_tolerate=0.1,order_sensitive = False,num=2):
+	def query_middle_poi(self,coord1,coord2,poitype,sum_tolerate=0.2,diff_tolerate=0.1,order_sensitive = False,num=5):
 		poitype = OtherUtils.StdlizePOIType(poitype);
 		line_dis_max = DistanceUtils.spherical_distance(coord1,coord2)*(1+sum_tolerate);
 		self.mc.clear();
@@ -346,16 +348,18 @@ class Queries:
 		raw = dbh.executeAndFetchAll("select a.id, a.latitude, a.longitude, "+\
 			"st_distance(point(a.longitude/1e7,a.latitude/1e7),point(%s,%s))*111195 as dis1, "+\
 			"st_distance(point(a.longitude/1e7,a.latitude/1e7),point(%s,%s))*111195 as dis2 "+\
-			"from (select id, latitude, longitude from current_nodes where id in "+\
-			"(select distinct node_id from current_node_tags where k='poitype' and v=%s)) as a "+\
+			"from (select id, latitude, longitude from current_nodes right join "+\
+			"(select distinct node_id from current_node_tags where k='poitype' and v=%s) as node on node.node_id=current_nodes.id) as a "+\
 			"having dis1+dis2<%s and abs(dis1-dis2)<least(dis1,dis2)*%s"+\
 			(" and dis1 > dis2 " if order_sensitive else " ") +\
 			"order by st_distance(point(a.longitude/1e7,a.latitude/1e7),point(%s,%s)) limit 0,%s",\
 			params=(coord1[1],coord1[0],coord2[1],coord2[0],poitype,line_dis_max,diff_tolerate,\
 				0.5*(coord2[1]+coord1[1]),0.5*(coord2[0]+coord1[0]),num,));
-		ret = [(tp[0],NodeNameUtils.GetNameById(tp[0])[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
+		ret = [(tp[0],NodeNameUtils.GetNameById(tp[0]),[tp[1],tp[2]],tp[3],tp[4]) for tp in raw];
 		self.mc.set_target_points_byid([tp[0] for tp in ret])
-		self.mc.convert();
+		self.mc.add_target_line([tuple(coord1),(ret[0][2][0]/DistanceUtils.coord_scale,ret[0][2][1]/DistanceUtils.coord_scale)])
+		self.mc.add_target_line([tuple(coord2),(ret[0][2][0]/DistanceUtils.coord_scale,ret[0][2][1]/DistanceUtils.coord_scale)])
+		self.mc.convert(qname=sys._getframe().f_code.co_name);
 		return ret;
 
 	#########################################################################################################
@@ -374,7 +378,7 @@ class Queries:
 		node_list = [(tp[0],tp[1],tp[2],DistanceUtils.spherical_distance(coord_int,tp[1])) for tp in node_list]
 		ret = sorted(node_list,key=lambda node:node[3])[:num];
 		self.mc.set_target_points_byid([tp[0] for tp in ret]);
-		self.mc.convert();
+		self.mc.convert(qname=sys._getframe().f_code.co_name);
 		return ret
 
 	#########################################################################################################
@@ -400,7 +404,7 @@ class Queries:
 		self.mc.clear();
 		self.mc.add_root_point(tuple(coord));
 		self.mc.set_target_bounder((minLat, minLon, maxLat, maxLon));
-		self.mc.convert();
+		self.mc.convert(qname=sys._getframe().f_code.co_name);
 		return;
 
 
@@ -409,15 +413,15 @@ class Queries:
 if __name__ == '__main__':
 	myQuery = Queries();
 	# print myQuery.query1(node_name="人民广场".decode('utf8'))
-	# print myQuery.query5(coord=[31,121])
+	# print myQuery.query5(coord=[31.11652,121.391634])
 	# print myQuery.query_routing("car",[31.1981978,121.4152321],[31.2075866,121.6090868]);
 	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
-	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"大型购物".decode('utf8'))
+	print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"大型购物".decode('utf8'))
 	# print myQuery.query_most_poi_within_radius("美食".decode('utf8'),2000)
-	# print myQuery.query2(way_name="杨高中路".decode('utf8'));
+	# print myQuery.query2(way_name="东川路".decode('utf8'));
 	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),1000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
-	print myQuery.query_pair_poitype([31.025403,121.431028],"住宅区".decode('utf8'),"美食".decode('utf8'),order_sensitive=False,num=30)
+	# print myQuery.query_pair_poitype([31.025403,121.431028],"住宅区".decode('utf8'),"美食".decode('utf8'),order_sensitive=False,num=30)
 	# print myQuery.query4("加油站".decode('utf8'),[31.1977664,121.4147976],10000)
 	# while 1:
 	# 	a = raw_input();

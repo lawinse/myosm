@@ -4,7 +4,9 @@ from sklearn.externals import joblib
 import random
 from Utils import OtherUtils
 from Utils import coord_scale_default as csd
-import gc
+from Graph import Graph
+from Config import *
+import datetime
 
 
 # This Converter would be used by visualization
@@ -20,7 +22,8 @@ class MapConverter:
 		self.__target_range = None
 		self.__background_lines = None
 		self.__url = None;
-		gc.collect()
+		# import gc
+		# gc.collect()
 
 	def clear(self):
 		self.__root_points = [] #root_points[i] = (lat1, lon1)
@@ -109,7 +112,12 @@ class MapConverter:
 
 	def set_target_bounder(self,bounder):
 		self.__target_bounder = bounder;
-	def get_target_bounder(self,border_ratio=0.1):
+
+	def __is_in_bounder(self,point):
+		(minLat, minLon, maxLat, maxLon) = self.get_target_bounder();
+		return point[0]<=maxLat and point[0] >= minLat and point[1] <= maxLon and point[1] >= minLon
+
+	def get_target_bounder(self,border_ratio=0.1,width_height_ratio=(9.0,16.0)):
 		if len(self.__target_bounder) == 0:
 			minLat=90
 			minLon=180
@@ -121,7 +129,7 @@ class MapConverter:
 				minLon = min(point[1],minLon);
 				maxLon = max(point[1],maxLon);
 
-			for line in iter(self.__target_lines+self.__background_lines):
+			for line in iter(self.__target_lines):
 				for point in iter(line):
 					minLat = min(point[0],minLat);
 					maxLat = max(point[0],maxLat);
@@ -139,7 +147,17 @@ class MapConverter:
 			minLat -= latDiff*border_ratio;
 			maxLat += latDiff*border_ratio;
 			minLon -= lonDiff*border_ratio;
-			maxLat += lonDiff*border_ratio;
+			maxLon += lonDiff*border_ratio;
+
+			if (maxLat-minLat)*1.0/(maxLon-minLon) > width_height_ratio[0]/width_height_ratio[1]:
+				added = (maxLat-minLat)/width_height_ratio[0]*width_height_ratio[1]-(maxLon-minLon);
+				maxLon += added * 0.5;
+				minLon -= added * 0.5;
+			else:
+				added = (maxLon-minLon)/width_height_ratio[1]*width_height_ratio[0]-(maxLat-minLat);
+				maxLat += added * 0.5;
+				minLat -= added * 0.5;
+
 			self.__target_bounder = (minLat, minLon, maxLat, maxLon)
 		return self.__target_bounder;
 
@@ -165,19 +183,22 @@ class MapConverter:
 
 	def get_background_points(self,num=None,ratio=1.0):
 		(minLat, minLon, maxLat, maxLon) = self.get_target_bounder();
-		bgp = dbh.executeAndFetchAll("select latitude/1e7, longitude/1e7 from cuurent_nodes"+\
+		bgp = self.__dbh.executeAndFetchAll("select latitude/1e7, longitude/1e7 from current_nodes inner join"+\
+			" (select distinct node_id from current_node_tags) as a on current_nodes.id=a.node_id "+\
 			"where (latitude/1e7 between %s and %s) and (longitude/1e7 between %s and %s)",\
 			params = (minLat,maxLat,minLon,maxLon));
+		sample_n = 0;
 		if num != None:
 			if int(len(bgp)/num) <= 1:
 				return bgp;
 			sample_n = num;
-		else:
-			sample_n = int(len(bgp)*ratio)
+		
+		sample_n = max(sample_n,int(len(bgp)*ratio))
 		import random
 
 		sample_bgp = random.sample(bgp,sample_n);
 		bgp = None;
+		import gc
 		gc.collect();
 		return sample_bgp
 
@@ -187,13 +208,24 @@ class MapConverter:
 	def add_background_line_byid(self,lineid):
 		self.__background_lines.append(self.__line2pointlists(lineid));
 
+	def __filter_lines_by_bounder(self,lines):
+		for i in xrange(len(lines)):
+			for j in xrange(len(lines[i])):
+				if not self.__is_in_bounder(lines[i][j]):
+					lines[i][j]="";
+			while "" in lines[i]: lines[i].remove("")
+		while [] in lines: lines.remove([]);
+		return lines;
+
 	def get_background_lines(self,num=None,ratio=1.0):
+		self.__background_lines = self.__filter_lines_by_bounder(self.__background_lines);
 		if num != None:
 			if int(len(self.__background_lines)/num) <= 1:
 				return;
 			sample_n = num;
 		else:
 			sample_n = int(len(self.__background_lines)*ratio)
+		if sample_n == len(self.__background_lines): return self.__background_lines;
 		import random
 		return random.sample(self.__background_lines,sample_n)
 
@@ -210,6 +242,7 @@ class MapConverter:
 		print "#root_points: %d" % len(self.get_root_points());
 		print "#target_points: %d" % len(self.get_target_points());
 		print "#target_lines: %d" % sum([len(line)-1 for line in self.get_target_lines()]);
+		print "#background_lines: %d" % sum([len(line)-1 for line in self.get_background_lines()]);
 		print "###################\n"
 
 	def get_url(self):
@@ -218,13 +251,33 @@ class MapConverter:
 	def set_url(self,url):
 		self.__url = url
 
-	def convert(self):
-		MapConverter.DoConvert(self);
-
-	@staticmethod
-	def DoConvert(mpcnvtr):
-		#TODO
+	def convert(self,directory=WORK_DIR,qname=""):
 		print ">>>>> Converting to graph ..."
-		mpcnvtr.report();
+		self.report();
+		mg = Graph()
+		mg.add_target_points(self.get_target_points());
+		mg.add_root_points(self.get_root_points());
+		mg.add_target_lines(self.get_target_lines()); 
+
+		mg.add_background_points(self.get_background_points(num=20000,ratio=0.65))
+		mg.add_background_lines(self.get_background_lines());
+		if not os.path.exist(directory):
+			os.mkdir(directory);
+		fname = directory+qname+str(hash(datetime.datetime.now()))+'.png';
+		mg.xml_render(fname);
+		self.set_url(fname)
+
+
+if __name__ == '__main__':
+	mpcnvtr = MapConverter();
+	mpcnvtr.load("MapConverter.dump");
+	mpcnvtr.report();
+	mg = Graph()
+	ways = mpcnvtr.get_target_lines();
+
+	for item in ways:
+		mg.add_target_points(item);
+		mg.add_target_lines(item); 
+	mg.add_background_points(mpcnvtr.get_background_points())
 	
 
