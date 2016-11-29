@@ -94,7 +94,7 @@ class Graph:
             return None
         pass
 
-    def xml_render(self,file_name,out_size=(1920,1080)):
+    def xml_render(self,file_name,out_size=(1280,720)):
         OutputFile = open(WORK_DIR+'fig/mystyle.xml','w')
         OutputFile.write(self.OutputFormat+'\n</Map>')
         OutputFile.close()

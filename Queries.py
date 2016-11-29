@@ -41,7 +41,13 @@ class Queries:
 				result = dbh.executeAndFetchAll("select distinct id from current_way_nodes where node_id=%s",params=(tid,));
 				isIntersection = len(result) > 1;
 				way_list = [tp[0] for tp in result];
-				if len(way_list)>0: return (tid, way_list, isIntersection)
+				if len(way_list)>0: 
+					self.mc.clear();
+					self.mc.add_target_point_byid(tid);
+					self.mc.set_target_lines_byid(way_list);
+					way_list = [(wid, WayNameUtils.GetNameById(wid)) for wid in way_list];
+					self.mc.convert(qname=sys._getframe().f_code.co_name);
+					return (tid, NodeNameUtils.GetNameById(tid) ,way_list, isIntersection)
 		else:
 			tid = node_id;
 		dbh = DBHelper();
@@ -50,8 +56,9 @@ class Queries:
 		way_list = [tp[0] for tp in result];
 
 		self.mc.clear();
-		self.mc.add_root_point_byid(tid);
-		if len(way_list) > 0: self.mc.set_target_lines_byid(way_list);
+		self.mc.add_target_point_byid(tid);
+		if len(way_list) > 0:
+			self.mc.set_target_lines_byid(way_list);
 		way_list = [(wid, WayNameUtils.GetNameById(wid)) for wid in way_list];
 		self.mc.convert(qname=sys._getframe().f_code.co_name);
 
@@ -421,13 +428,16 @@ class Queries:
 
 if __name__ == '__main__':
 	myQuery = Queries();
-	# print myQuery.query1(node_name="人民广场".decode('utf8'))
+	print myQuery.query1(node_name="中山公园".decode('utf8'))
 	# print myQuery.query5(coord=[31.257391,121.483045])
-	# print myQuery.query_routing("car",[31.257391,121.483045],[31.11652,121.391634]);
+	# print myQuery.query_routing("car",[31.1972080,121.4331082],[31.2362669,121.5032643]);
+	# print myQuery.query_routing("bike",[31.257391,121.483045],[31.11652,121.391634]);
+	# print myQuery.query_routing("walk",[31.257391,121.483045],[31.11652,121.391634]);
+
 	# print myQuery.query_poi_node_name_nearby([31.0256896255,121.4364611407],"电信营业厅".decode('utf8'))
 	# print myQuery.query_middle_poi([31.257391,121.483045],[31.11652,121.391634],"大型购物".decode('utf8'))
 	# print myQuery.query_most_poi_within_radius("".decode('utf8'),10000)
-	print myQuery.query2(way_name="莲花南路".decode('utf8'));
+	# print myQuery.query2(way_name="东川路".decode('utf8'));
 	# print myQuery.query_most_poi_within_radius("地铁站".decode('utf8'),10000)
 	# print myQuery.query_middle_poi([31.1981978,121.4152321],[31.2075866,121.6090868],"住宅区".decode('utf8'))
 	# print myQuery.query_pair_poitype([31.025403,121.431028],"住宅区".decode('utf8'),"美食".decode('utf8'),order_sensitive=False,num=30)

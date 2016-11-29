@@ -2,14 +2,14 @@
 <Map background-color="#000000">
 	<Style name="target_lines">
 		<Rule>
-			<LineSymbolizer stroke="#00FF7F" stroke-width="5" stroke-linejoin="round"
+			<LineSymbolizer stroke="#00FF7F" stroke-width="20" stroke-linejoin="round"
 				stroke-linecap="round" stroke-opacity="0.7"/>
 		</Rule>
 	</Style>
 
 	<Style name="background_lines">
 		<Rule>
-			<LineSymbolizer stroke="#D3D3D3" stroke-width="5" stroke-linejoin="round"
+			<LineSymbolizer stroke="#D3D3D3" stroke-width="10" stroke-linejoin="round"
 				stroke-linecap="round" stroke-opacity="0.7"/>
 		</Rule>
 	</Style>
