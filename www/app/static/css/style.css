@@ -1,0 +1,43 @@
+.navbar-brand-moji {
+	color: #333 !important;
+}
+.navbar-brand-moji:hover {
+	color: #ccc !important;
+	transform: scale(1.02);
+}
+
+.map {
+	border-radius: 5px;
+	box-shadow: 0px 0px 25px #eee;
+}
+
+
+/* .content.css */
+.query-box > .panel {
+	border-radius: 3px;
+	box-shadow: 0px 0px 25px #eee;
+}
+
+// .panel > img {
+// 	width: 100%;
+// 	border-radius: 5px;
+// 	box-shadow: 0px 0px 25px #eee;
+// }
+
+/* footer */
+.footer-box {
+	background-color: #f8f8f8;
+	text-align: left;
+	font-size: 14px;
+	color: #aaa;
+}
+.footer-box a,
+.copyright-muted,
+.contact-box {
+	color: #eee;
+	text-decoration: none;
+}
+.footer-box a:hover {
+	color: #aaa;
+}
+

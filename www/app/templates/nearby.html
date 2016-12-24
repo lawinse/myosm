@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Nearby Point-Of-Interest</h1><hr>
+<script type="text/javascript">
+function poi_init() {
+	$(function() {
+		// ["金融", "其他旅游景点", "体育场馆", "极限运动场所", "高等院校", "收费站", "酒店", "游乐园", "写字楼", "加油加气站", 
+		// "公交车站", "港口", "飞机场", "海滨浴场", "政府机构", "风景区", "健身中心",
+		// "大型购物", "桥", "公司", "住宅区", "农林园艺", "厂矿", "停车场", "其他", "文化传媒", "地铁站", "休闲娱乐",
+		// "其他教育", "火车站", "服务区", "长途汽车站", "医疗", "小型购物", "美食", "园区", "宿舍"];
+		$("#input-Q4-pty").autocomplete({source:available_poi});
+		$("#input-Q9-pty").autocomplete({source:available_poi});
+		$("#input-Q8-pty1").autocomplete({source:available_poi});
+		$("#input-Q8-pty2").autocomplete({source:available_poi});
+	});
+}
+</script>
+<div class="container">
+	<ul class="nav nav-tabs">
+	  <li id="tab-Q4" role="presentation" class="active"><a onclick="tabs('Q4')">POI-Type</a></li>
+	  <li id="tab-Q11" role="presentation" class><a onclick="tabs('Q11')">POI-Name</a></li>
+	  <li id="tab-Q9" role="presentation" class><a onclick="tabs('Q9')">Hottest Area</a></li>
+	  <li id="tab-Q8" role="presentation" class><a onclick="tabs('Q8')">Pair</a></li>
+	</ul>
+	<div class="main-box">
+
+		<div class="query-box" id="Q4-wrapper" style="display:block;">
+			<div class="panel">
+				<div class="jumbotron">
+					<h3>Function Description</h3>
+					<p>Query the POIs (by type) within a radius of a given location (longitude-latitude coordinates).</p>
+				</div>
+				<div class="input-group">
+					<div class="ui-widget"><input type="text" class="form-control" id="input-Q4-pty" placeholder="POI-Type" style="width:20%;"></div>
+					<input type="text" class="form-control" id="input-Q4-lat" placeholder="Latitude" style="width:30%;">
+					<input type="text" class="form-control" id="input-Q4-lon" placeholder="Longitude" style="width:30%;">
+					<input type="text" class="form-control" id="input-Q4-rd" placeholder="Radius(km)" style="width:20%;">
+					<div class="input-group-btn">
+						<button type="button" class="btn btn-default" onclick="query4()">Search by POI-Type</button>
+					</div>
+				</div>
+				<div class="container results" id="Q4-result"></div>
+				<img src="" alt="" id="Q4-pic">
+			</div>
+		</div>
+
+		<div class="query-box" id="Q11-wrapper" style="display:none;">
+			<div class="panel">
+				<div class="jumbotron">
+					<h3>Function Description</h3>
+					<p>Query the POIs (by name) within a certain number of a given location (longitude-latitude coordinates).</p>
+				</div>
+				<div class="input-group">
+					<input type="text" class="form-control" id="input-Q11-pn" placeholder="POI-Name" style="width:20%;">
+					<input type="text" class="form-control" id="input-Q11-lat" placeholder="Latitude" style="width:30%;">
+					<input type="text" class="form-control" id="input-Q11-lon" placeholder="Longitude" style="width:30%;">
+					<input type="text" class="form-control" id="input-Q11-mn" placeholder="Max Number" style="width:20%;">
+					<div class="input-group-btn">
+						<button type="button" class="btn btn-default" onclick="query11()">Search by POI-Name</button>
+					</div>
+				</div>
+				<div class="container results" id="Q11-result"></div>
+				<img src="" alt="" id="Q11-pic">
+			</div>
+		</div>
+
+		<div class="query-box" id="Q9-wrapper" style="display:none;">
+			<div class="panel">
+				<div class="jumbotron">
+					<h3>Function Description</h3>
+					<p>Query the location (longitude-latitude coordinates) within a given radius which contains most POIs (roughly).</p>
+				</div>
+				<div class="input-group">
+					<div class="ui-widget"><input type="text" class="form-control" id="input-Q9-pty" placeholder="POI-Type" style="width:60%;"></div>
+					<input type="text" class="form-control" id="input-Q9-rd" placeholder="Radius(km)" style="width:40%;">
+					<div class="input-group-btn">
+						<button type="button" class="btn btn-default" onclick="query9()">Find Hottest!!</button>
+					</div>
+				</div>
+				<div class="container results" id="Q9-result"></div>
+				<img src="" alt="" id="Q9-pic">
+			</div>
+		</div>
+
+		<div class="query-box" id="Q8-wrapper" style="display:none;">
+			<div class="panel">
+				<div class="jumbotron">
+					<h3>Function Description</h3>
+					<p>Query a POI pairs and calculate the total distance of your journey started from a given location (longitude-latitude coordinates).</p>
+				</div>
+				<div class="input-group">
+					<input type="text" class="form-control" id="input-Q8-lat" placeholder="Latitude" style="width:30%;">
+					<input type="text" class="form-control" id="input-Q8-lon" placeholder="Longitude" style="width:30%;">
+					<div class="ui-widget"><input type="text" class="form-control" id="input-Q8-pty1" placeholder="POI-Type1" style="width:20%;"></div>
+					<div class="ui-widget"><input type="text" class="form-control" id="input-Q8-pty2" placeholder="POI-Type2" style="width:20%;"></div>
+					<div class="input-group-btn">
+						<button type="button" class="btn btn-default" onclick="query8()">Wanna 2 POIs!!</button>
+					</div>
+				</div>
+				<div class="container results" id="Q8-result"></div>
+				<img src="" alt="" id="Q8-pic">
+			</div>
+		</div>
+
+
+	</div>
+</div>
+<script type="text/javascript">poi_init();</script>
+
+{% endblock %}

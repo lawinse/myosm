@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Basic Functions</h1><hr>
+<script type="text/javascript">
+function select_mode(mode) {
+	$("#dropdown-selector").val(mode);
+	$("#dropdown-selector").html($('#selector-'+mode).html());
+	for (var i = 0; i < 2; i++) {
+		if (mode == i) {
+			$("#Q1-"+i).css('display', 'block');
+		} else {
+			$("#Q1-"+i).css('display', 'none');
+		}
+	}
+}
+</script>
+<div class="container">
+	<ul class="nav nav-tabs">
+	  <li id="tab-Q1" role="presentation" class="active"><a onclick="tabs('Q1')">Nodes</a></li>
+	  <li id="tab-Q2" role="presentation" class><a onclick="tabs('Q2')">Ways</a></li>
+	  <li id="tab-Q5" role="presentation" class><a onclick="tabs('Q5')">Closest Road</a></li>
+	</ul>
+	<div class="main-box">
+
+		<div class="query-box" id="Q1-wrapper" style="display:block;">
+			<div class="panel">
+				<div class="jumbotron">
+					<h3>Function Description</h3>
+					<p>Given a node, return all ways that contain it, and infer whether the node is an intersection of roads, i.e., a crossroad.</p>
+				</div>
+				<div class="input-group">
+					<div id="Q1-0" style="display:block;">
+						<input type="text" class="form-control" id="input-Q1-nn" placeholder="Search by Name">
+					</div>
+					<div id="Q1-1" style="display:none;">
+						<input type="text" class="form-control" id="input-Q1-lat" placeholder="Latitude" style="width:50%;">
+						<input type="text" class="form-control" id="input-Q1-lon" placeholder="Longitude" style="width:50%;">
+					</div>
+					<div class="input-group-btn">
+						<button type="button" class="btn btn-default" id="dropdown-selector" value="0" onclick="query1()">Search by Name</button>
+						<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							<span class="caret"></span>
+							<span class="sr-only">Toggle Dropdown</span>
+						</button>
+						<ul class="dropdown-menu">
+							<li><a id="selector-0" onclick="select_mode(0)">Search by Name</a></li>
+							<li><a id="selector-1" onclick="select_mode(1)">Search by Coordinate</a></li>
+						</ul>
+					</div>
+				</div>
+				<div class="container results" id="Q1-result"></div>
+				<img src="" alt="" id="Q1-pic">
+			</div>
+		</div>
+
+		<div class="query-box" id="Q2-wrapper" style="display:none;">
+			<div class="panel">
+				<div class="jumbotron">
+					<h3>Function Description</h3>
+					<p>Given a way, return all the nodes along the way.</p>
+				</div>
+				<div class="input-group">
+					<input type="text" class="form-control" id="input-Q2-nn" placeholder="Search by Name">
+					<div class="input-group-btn">
+						<button type="button" class="btn btn-default" onclick="query2()">Search by Name</button>
+					</div>
+				</div>
+				<div class="container results" id="Q2-result"></div>
+				<img src="" alt="" id="Q2-pic">
+			</div>
+		</div>
+
+		<div class="query-box" id="Q5-wrapper" style="display:none;">
+			<div class="panel">
+				<div class="jumbotron">
+					<h3>Function Description</h3>
+					<p>Find the closest road to a given GPS coordinate.</p>
+				</div>
+				<div class="input-group">
+					<input type="text" class="form-control" id="input-Q5-lat" placeholder="Latitude" style="width:50%;">
+					<input type="text" class="form-control" id="input-Q5-lon" placeholder="Longitude" style="width:50%;">
+					<div class="input-group-btn">
+						<button type="button" class="btn btn-default" onclick="query5()">Search by Coordinate</button>
+					</div>
+				</div>
+				<div class="container results" id="Q5-result"></div>
+				<img src="" alt="" id="Q5-pic">
+			</div>
+		</div>
+
+
+	</div>
+</div>
+
+{% endblock %}

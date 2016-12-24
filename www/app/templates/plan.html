@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Plan Your Time</h1><hr>
+<script type="text/javascript">
+function select_mode(mode) {
+	$("#dropdown-selector").val(mode);
+	$("#dropdown-selector").html($('#selector-'+mode).html());
+}
+</script>
+<div class="container">
+	<ul class="nav nav-tabs">
+	  <li id="tab-Q7" role="presentation" class="active"><a onclick="tabs('Q7')">Solo Play</a></li>
+	  <li id="tab-Q10" role="presentation" class><a onclick="tabs('Q10')">Have A Date</a></li>
+	</ul>
+	<div class="main-box">
+		
+		<div class="query-box" id="Q7-wrapper" style="display:block;">
+			<div class="panel">
+				<div class="jumbotron">
+					<h3>Function Description</h3>
+					<p>Query a routing path from location <i>BEGIN</i> to location <i>END</i> with a certain transformation method.</p>
+				</div>
+				<div class="input-group">
+					<input type="text" class="form-control" id="input-Q7-lat1" placeholder="BEGIN:Latitude" style="width:25%;">
+					<input type="text" class="form-control" id="input-Q7-lon1" placeholder="BEGIN:Longitude" style="width:25%;">
+					<input type="text" class="form-control" id="input-Q7-lat2" placeholder="END:Latitude" style="width:25%;">
+					<input type="text" class="form-control" id="input-Q7-lon2" placeholder="END:Longitude" style="width:25%;">
+					<div class="input-group-btn">
+						<button type="button" class="btn btn-default" id="dropdown-selector" value="0" onclick="query7()">By Car</button>
+						<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							<span class="caret"></span>
+							<span class="sr-only">Toggle Dropdown</span>
+						</button>
+						<ul class="dropdown-menu">
+							<li><a id="selector-0" onclick="select_mode(0)">By Car</a></li>
+							<li><a id="selector-1" onclick="select_mode(1)">On Foot</a></li>
+							<li><a id="selector-2" onclick="select_mode(2)">By Bike</a></li>
+						</ul>
+					</div>
+				</div>
+				<div class="container results" id="Q7-result"></div>
+				<img src="" alt="" id="Q7-pic">
+			</div>
+		</div>
+
+		<div class="query-box" id="Q10-wrapper" style="display:none;">
+			<div class="panel">
+				<div class="jumbotron">
+					<h3>Function Description</h3>
+					<p>Query a suitable POI for two people started from different locations.</p>
+				</div>
+				<div class="input-group">
+					<input type="text" class="form-control" id="input-Q10-lat1" placeholder="A:Latitude" style="width:20%;">
+					<input type="text" class="form-control" id="input-Q10-lon1" placeholder="A:Longitude" style="width:20%;">
+					<input type="text" class="form-control" id="input-Q10-lat2" placeholder="B:Latitude" style="width:20%;">
+					<input type="text" class="form-control" id="input-Q10-lon2" placeholder="B:Longitude" style="width:20%;">
+					<div class="ui-widget"><input type="text" class="form-control" id="input-Q10-pty" placeholder="POI-Type" style="width:20%;"></div>
+					<div class="input-group-btn">
+						<button type="button" class="btn btn-default" onclick="query10()">Start My Date!!</button>
+					</div>
+				</div>
+				<div class="container results" id="Q10-result"></div>
+				<img src="" alt="" id="Q10-pic">
+			</div>
+		</div>
+
+
+	</div>
+</div>
+<script type="text/javascript">$("#input-Q10-pty").autocomplete({source:available_poi});</script>
+
+{% endblock %}

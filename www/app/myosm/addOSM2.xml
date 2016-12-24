@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<changeset operation="commit" >
+	<node id="1" lat="30.8754122" lon="120.3469386">
+		<tag k='myattr' v='node1'/>
+	</node>
+</changeset>
